@@ -4,8 +4,8 @@ import numpy as np
 from torchvision import transforms
 import os
 
-
-class SaliencyDataset(torch.utils.data.Dataset):
+# TODO, probabilmente c'è da introdurre nuova logica per includere testi
+class ImgTextDataset(torch.utils.data.Dataset):
     def __init__(self, orig_dataset, transform=None):
         self.orig_dataset = orig_dataset
         self.transform = transform
@@ -155,9 +155,6 @@ if __name__ == "__main__":
         #'imagenet',
         'oxford-iiit-pet',
         'oxford-flowers',
-        'svhn',
-        'mnist',
-        'fashionmnist',
     ]
     
     for dataset in data:
@@ -191,8 +188,7 @@ if __name__ == "__main__":
         # for key, value in class_distribution.items():
         #     print(f'{key}: {value}')
 
-        # print number of classes
-        print(f'Number of classes: {len(class_distribution)}')
+        print(f'Number of classes: {len(class_distribution)}') # print number of classes
 
         # compute the class unbalance as the ratio between the number of samples in the most frequent class and the number of samples in the least frequent class
         dist = list(class_distribution.values())

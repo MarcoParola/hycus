@@ -5,8 +5,10 @@ import os
 #from src.utils import get_early_stopping, get_save_model_callback
 from src.models.model import load_model
 from src.datasets.dataset import load_dataset
-from src.metrics.metrics import compute_classification_metrics
+from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
+from src.utils import get_forgetting_subset
+from omegaconf import OmegaConf
 
 
 
@@ -18,18 +20,7 @@ def main(cfg):
         random_data = os.urandom(4)
         seed = int.from_bytes(random_data, byteorder="big")
         cfg.seed = seed
-    torch.manual_seed(cfg.seed)
-
-
-    # callback
-    '''
-    callbacks = list()
-    callbacks.append(get_early_stopping(cfg.train.patience))
-    finetune = "finetuned_" if cfg.train.finetune else "no_finetuned_"
-    model_save_dir = os.path.join(cfg.currentDir, cfg.checkpoint, finetune + cfg.model + cfg.dataset.name )
-    callbacks.append(get_save_model_callback(model_save_dir))
-    '''
-
+    torch.manual_seed(cfg.seed)    
 
     # loggers
     loggers = get_loggers(cfg)
@@ -37,14 +28,7 @@ def main(cfg):
     # Load dataset
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     train, val, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
-    train_loader = torch.utils.data.DataLoader(train, 
-        batch_size=cfg.train.batch_size, 
-        shuffle=True, 
-        num_workers=cfg.train.num_workers)
-    val_loader = torch.utils.data.DataLoader(val, 
-        batch_size=cfg.train.batch_size, 
-        shuffle=False, 
-        num_workers=cfg.train.num_workers)
+    # TODO fai il wrap con la classe custom: ImgTextDataset
     test_loader = torch.utils.data.DataLoader(test, 
         batch_size=cfg.train.batch_size, 
         shuffle=False, 
@@ -56,11 +40,15 @@ def main(cfg):
 
     # compute classification metrics
     num_classes = cfg[cfg.dataset.name].n_classes
-    forgetting_subset = [1,4,8]
-    metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset)
-    # pretty dictionary display
+    forgetting_subset = get_forgetting_subset(cfg.forgetting_set, cfg[cfg.dataset.name].n_classes, cfg.forgetting_set_size)
+    metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
     for k, v in metrics.items():
         print(f'{k}: {v}')
+
+    # unlearning process
+    unlearning_method = None
+
+    # recompute metrics
 
 
 
