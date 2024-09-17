@@ -1,0 +1,39 @@
+defaults:
+  - _self_
+  - dataset_info
+  - target_layers
+
+currentDir: ${hydra:runtime.cwd}
+
+model: resnet
+seed: 42
+
+dataset: 
+  name: cifar10
+  path: ./data
+  resize: 224
+
+device: "cuda"
+
+train:
+  batch_size: 1
+  max_epochs: 20
+  lr: 1e-6
+  weight_decay: 5e-4
+  accelerator: cpu
+  devices: 1
+  save_path: ./models
+  num_workers: 1
+  patience: 4
+  finetune: True
+
+log:
+  path: ./logs
+  wandb: True
+
+wandb:
+  project: icus
+  entity: marcoparola
+
+
+
