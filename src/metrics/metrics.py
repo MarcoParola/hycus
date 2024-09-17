@@ -48,5 +48,18 @@ def compute_classification_metrics(model, test_loader, num_classes, forgetting_s
     
     return metrics
 
+def compute_metrics(model, test_loader, num_classes, forgetting_subset):
+    """Compute classification metrics
+
+    model: torch.nn.Module: model
+    test_loader: torch.utils.data.DataLoader: test data loader
+    num_classes: int: number of classes
+    forgetting_subset: list: class subset
+    """
+    classification_metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset)
+    mia_metrics = None # TODO implement MIA metrics
+    metrics = {**classification_metrics, **mia_metrics}
+    return metrics
+
 
 
