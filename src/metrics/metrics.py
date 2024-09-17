@@ -58,7 +58,8 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset):
     """
     classification_metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset)
     mia_metrics = None # TODO implement MIA metrics
-    metrics = {**classification_metrics, **mia_metrics}
+    #metrics = {**classification_metrics, **mia_metrics}
+    metrics = {**classification_metrics}
     return metrics
 
 

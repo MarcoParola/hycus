@@ -42,14 +42,14 @@ def load_model(model_name, dataset):
             pass # TODO
 
     # Oxford-IIIT Pet
-    elif dataset == 'oxford-pet':
+    elif dataset == 'oxford-iiit-pet':
         if model_name == 'resnet':
             model = timm.create_model('hf-hub:anonauthors/oxford_pet-timm-resnet50', pretrained=True)
         elif model_name == 'vit':
             model = timm.create_model("hf-hub:anonauthors/oxford_pet-timm-vit_base_patch16_224.orig_in21k_ft_in1k", pretrained=True)
 
     # Oxford Flower102
-    elif dataset == 'oxford-flower':
+    elif dataset == 'oxford-flowers':
         if model_name == 'resnet':
             model = timm.create_model('hf-hub:anonauthors/flowers102-timm-resnet50', pretrained=True)
         elif model_name == 'vit':

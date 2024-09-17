@@ -140,6 +140,10 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.2, test_split=0.2):
     else:
         raise ValueError(f'Unknown dataset: {dataset}')
 
+    train = ImgTextDataset(train)
+    val = ImgTextDataset(val)
+    test = ImgTextDataset(test)
+
     return train, val, test
 
 
@@ -168,9 +172,6 @@ if __name__ == "__main__":
         for i in range(10):
             img, lbl = test.__getitem__(i)
             print(img.shape, lbl)
-            plt.imshow(img.permute(1, 2, 0))
-            plt.title(lbl)
-            plt.show()
     
     # block to compute class distribution and class unbalance
     '''
