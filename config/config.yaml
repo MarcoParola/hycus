@@ -19,16 +19,12 @@ dataset:
 device: "cuda"
 
 train:
-  batch_size: 1
+  batch_size: 16
   max_epochs: 20
   lr: 1e-6
-  weight_decay: 5e-4
-  accelerator: cpu
-  devices: 1
   save_path: ./models
   num_workers: 1
-  patience: 4
-  finetune: True
+  patience: 10
 
 log:
   path: ./logs
