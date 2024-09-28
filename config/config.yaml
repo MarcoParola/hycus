@@ -14,9 +14,10 @@ forgetting_set_size: 4
 dataset: 
   name: cifar10
   path: ./data
+  classes: 10
   resize: 224
 
-device: "cuda"
+device: "cpu"
 
 train:
   batch_size: 16
@@ -25,6 +26,8 @@ train:
   save_path: ./models
   num_workers: 1
   patience: 10
+
+train_iters: 100
 
 log:
   path: ./logs

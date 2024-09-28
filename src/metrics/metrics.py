@@ -31,21 +31,25 @@ def compute_classification_metrics(model, test_loader, num_classes, forgetting_s
     num_classes: int: number of classes
     forgetting_subset: list: class subset
     """
+    print("Inizio a calcolare le metriche")
     y_true, y_pred = compute_predictions(model, test_loader)
 
     # compute metrics three times (on whole dataset, on the forgetting subset, on the retaining subset)
     metrics = dict()
     # whole dataset
+    print("Calcolo metriche su tutto il dataset")
     metrics['accuracy'] = accuracy_score(y_true, y_pred)
     # forgetting subset
+    print("Calcolo metriche su subset forget")
     y_true_forgetting = [y_true[i] for i in range(len(y_true)) if y_true[i] in forgetting_subset]
     y_pred_forgetting = [y_pred[i] for i in range(len(y_pred)) if y_true[i] in forgetting_subset]
     metrics['accuracy_forgetting'] = accuracy_score(y_true_forgetting, y_pred_forgetting)
     # retaining subset
+    print("Calcolo metriche su subset retain")
     y_true_retaining = [y_true[i] for i in range(len(y_true)) if y_true[i] not in forgetting_subset]
     y_pred_retaining = [y_pred[i] for i in range(len(y_pred)) if y_true[i] not in forgetting_subset]
     metrics['accuracy_retaining'] = accuracy_score(y_true_retaining, y_pred_retaining)
-    
+    print("Fine calcolo metriche")
     return metrics
 
 def compute_metrics(model, test_loader, num_classes, forgetting_subset):
@@ -59,6 +63,7 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset):
     classification_metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset)
     mia_metrics = None # TODO implement MIA metrics
     #metrics = {**classification_metrics, **mia_metrics}
+    print("classification_metrics")
     metrics = {**classification_metrics}
     return metrics
 
