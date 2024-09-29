@@ -22,6 +22,7 @@ class Scrub(BaseUnlearningMethod):
         self.alpha = alpha
         self.kd_T = kd_T
         self.msteps = opt.train_iters // 2  
+        self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
     def unlearn(self, train_loader):
