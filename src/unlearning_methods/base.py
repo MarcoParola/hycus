@@ -2,6 +2,7 @@ import torch
 from abc import ABC, abstractmethod
 from torch.cuda.amp import GradScaler
 import torchmetrics
+import tqdm
 
 class BaseUnlearningMethod(ABC):
     def __init__(self, opt, model, prenet=None):
@@ -81,4 +82,50 @@ class BaseUnlearningMethod(ABC):
         top1 = self.top1.compute().item()
         self.top1.reset()  # Reset della metrica per la prossima epoca
         print(f'Step: {self.curr_step} Train Top1: {top1:.3f}, Loss: {running_loss:.4f}')
+        return
+    
+
+    def eval(self, loader, save_model=True, save_preds=False):
+        """Valuta il modello su un dataset e salva il best model basato sulla top-1 accuracy."""
+        self.model.eval()   # Imposta il modello in modalità di valutazione
+        self.top1.reset()   # Resetta il calcolo dell'accuracy
+
+        if save_preds:
+            preds, targets = [], []  # Liste per salvare predizioni e target
+
+        with torch.no_grad():  # Disabilita il calcolo dei gradienti durante la valutazione
+            for (images, target) in tqdm.tqdm(loader):  # Per ogni batch nel loader di test/validazione
+               
+                images, target = images.to(self.opt.device), target.to(self.opt.device)  # Sposta su GPU
+                output = self.model(images) if self.prenet is None else self.model(self.prenet(images))  # Forward pass
+
+                # Calcola l'accuracy
+                self.top1.update(output, target)
+
+                if save_preds:  # Salva le predizioni e i target
+                    preds.append(output.cpu().numpy())
+                    targets.append(target.cpu().numpy())
+
+        # Calcola l'accuratezza top-1
+        top1 = self.top1.compute().item()  
+        self.top1.reset()
+
+        # Stampa l'accuratezza
+        if not save_preds:
+            print(f'Step: {self.curr_step} Val Top1: {top1*100:.2f}%')
+
+        # Se è abilitato il salvataggio del modello
+        if save_model:
+            self.save_files['val_top1'].append(top1)  # Salva l'accuratezza nel log
+            if top1 > self.best_top1:  # Se è la migliore accuratezza finora
+                self.best_top1 = top1  # Aggiorna la best_top1
+                self.best_model = copy.deepcopy(self.model).cpu()  # Salva il modello migliore
+                print(f"Nuovo best model salvato con accuratezza: {top1*100:.2f}%")
+
+        self.model.train()  # Torna in modalità di training
+
+        if save_preds:  # Se devi salvare predizioni e target
+            preds = np.concatenate(preds, axis=0)
+            targets = np.concatenate(targets, axis=0)
+            return preds, targets  # Ritorna predizioni e target
         return

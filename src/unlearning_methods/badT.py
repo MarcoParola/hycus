@@ -30,7 +30,6 @@ class BadT(BaseUnlearningMethod):
                 torch.nn.init.zeros_(m.bias)
 
     def forward_pass(self, sample, target, infgt):
-        # Passaggio forward senza prenet
         output = self.model(sample)
         
         # Calcolo dei logit dei due modelli (originale e random)
@@ -53,18 +52,3 @@ class BadT(BaseUnlearningMethod):
         self.top1(output, target)
         
         return loss
-
-    # Metodo train_one_epoch
-    def train_one_epoch(self, loader):
-        self.model.train()  # Imposto il modello in modalità di training
-        for input, target, infgt in loader:  # Presumo che `infgt` sia parte del dataloader
-            input, target, infgt = input.cuda(), target.cuda(), infgt.cuda()
-            with autocast():  # Usando mixed precision per accelerare il training
-                self.optimizer.zero_grad()
-                loss = self.forward_pass(input, target, infgt)  # Richiamo il forward pass
-                self.scaler.scale(loss).backward()  # Backprop con scaling della perdita
-                self.scaler.step(self.optimizer)  # Aggiorna i pesi
-                self.scaler.update()  # Aggiorna lo scaler per la mixed precision
-            self.curr_step += 1
-            if self.curr_step >= self.opt.train_iters:
-                break
