@@ -2,6 +2,7 @@ import hydra
 import torch
 import os
 from torch.utils.data import DataLoader
+from torch.utils.data.sampler import SubsetRandomSampler
 
 #from src.utils import get_early_stopping, get_save_model_callback
 from src.models.model import load_model
@@ -63,20 +64,21 @@ def main(cfg):
     print("Wrapper datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
     print("Indici da scordare:", forget_indices)
+    retain_indices = [i for i in range(len(train)) if i not in forget_indices]
     wrapped_train = DatasetWrapper(train, forget_indices)
-    retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4) 
-    forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4)
+    retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=4) 
+    forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=4)
     wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4)
 
     # unlearning process
     unlearning_method = cfg.unlearning_method
     unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, cfg)
     if unlearning_method == 'scrub':
-        unlearning.unlearn(train_loader)
+        unlearning.unlearn(wrapped_train_loader)
     elif unlearning_method == 'badT':
-        unlearning.unlearn(train_loader, test_loader, forgetting_subset)
+        unlearning.unlearn(wrapped_train_loader, test_loader, forgetting_subset)
     elif unlearning_method == 'ssd':
-        unlearning.unlearn(train_loader, test_loader, forget_loader)
+        unlearning.unlearn(wrapped_train_loader, test_loader, forget_loader)
     else:
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics

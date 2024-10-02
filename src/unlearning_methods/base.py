@@ -49,3 +49,36 @@ class BaseUnlearningMethod(ABC):
         """Carica il modello dal filepath specificato."""
         self.model.load_state_dict(torch.load(filepath, map_location=self.opt.device))
         self.model.to(self.opt.device)
+
+    def train_one_epoch(self, loader):
+        """Esegue un'epoca di training su un loader."""
+        print("Inizio epoca di training")
+        self.model.train()  # Imposta il modello in modalità training
+        self.top1.reset()  # Reset della metrica all'inizio dell'epoca
+        runningloss = 0.0
+        self.curr_step=0
+        # Ciclo principale su ogni batch del loader
+        for inputs, labels, infgt in loader:
+            print("Un batch")
+            inputs, labels, infgt = inputs.to(self.opt.device), labels.to(self.opt.device), infgt.to(self.opt.device)
+            # Azzeramento dei gradienti
+            self.optimizer.zero_grad()
+            # Eseguiamo il forward pass e calcoliamo la perdita
+            preds, loss = self.forward_pass(inputs, labels, infgt)
+            # Backward pass e aggiornamento pesi
+            loss.backward()
+            self.optimizer.step()
+            # Aggiornamento della metrica per il batch corrente
+            self.top1.update(preds, labels)
+            # Accumula la perdita
+            running_loss += loss.item()
+            # Incremento del contatore step
+            self.curr_step += 1
+            # Facoltativo: interrompe se si raggiunge il numero massimo di step
+            if self.curr_step >= self.opt.train_iters:
+                break
+        # Calcolo dell'accuratezza dopo aver processato tutti i batch
+        top1 = self.top1.compute().item()
+        self.top1.reset()  # Reset della metrica per la prossima epoca
+        print(f'Step: {self.curr_step} Train Top1: {top1:.3f}, Loss: {running_loss:.4f}')
+        return

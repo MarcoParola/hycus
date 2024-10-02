@@ -10,7 +10,7 @@ from src.unlearning_methods.base import BaseUnlearningMethod
 
 class Scrub(BaseUnlearningMethod):
 
-    def __init__(self, opt, model, retain_loader, forget_loader, test_loader, maximize=False, alpha=1.0, kd_T=1.0):
+    def __init__(self, opt, model, retain_loader, forget_loader, test_loader, maximize=False, alpha=0.001, kd_T=4.0):
         super().__init__(opt, model)
         print("Inizializzazione di Scrub")
         self.og_model = copy.deepcopy(model)  # Copia del modello originale
@@ -32,10 +32,18 @@ class Scrub(BaseUnlearningMethod):
             if self.curr_step < self.msteps:
                 self.maximize = True
                 self._train_one_phase(loader=self.forget_loader, train_loader=train_loader)
-            else:
-                self.maximize = False
-                self._train_one_phase(loader=train_loader, train_loader=train_loader)
+                self.curr_step += 1
+                self.eval(self.test_loader)
+           
+            self.maximize = False
+            self._train_one_phase(loader=train_loader, train_loader=train_loader)
             self.curr_step += 1
+
+    def distill_kl_loss(self, student_output, teacher_output, temperature):
+        """Calcola la perdita di distillazione usando la KL-divergenza."""
+        student_output = F.log_softmax(student_output / temperature, dim=1)
+        teacher_output = F.softmax(teacher_output / temperature, dim=1)
+        return F.kl_div(student_output, teacher_output, reduction='batchmean') * (temperature ** 2)
 
     def _train_one_phase(self, loader, train_loader):
         """Gestisce una fase di training, massimizzazione o minimizzazione."""
@@ -45,16 +53,18 @@ class Scrub(BaseUnlearningMethod):
         #self.eval(loader=self.test_loader)  
         self.eval(self.test_loader)
 
-    def forward_pass(self, inputs, target):
+    def forward_pass(self, inputs, target, infgt):
         """Esegue il forward pass e calcola la perdita."""
         inputs, target = inputs.to(self.opt.device), target.to(self.opt.device)
+        
+        # Forward pass del modello attuale (con gradienti abilitati)
         output = self.model(inputs)
-
-        # Forward pass del modello originale (in modalità no_grad)
+        
+        # Forward pass del modello originale (senza gradienti)
         with torch.no_grad():
             logit_t = self.og_model(inputs)
 
-        # Perdita standard (cross-entropy) + distillazione (KL-divergenza)
+        # Calcolo della perdita: standard (cross-entropy) + distillazione (KL-divergenza)
         loss = F.cross_entropy(output, target)
         loss += self.alpha * self.distill_kl_loss(output, logit_t, self.kd_T)
 
@@ -62,38 +72,9 @@ class Scrub(BaseUnlearningMethod):
         if self.maximize:
             loss = -loss
 
-        # Calcolo accuratezza top-1
-        self.top1(output, target)
-        return loss
+        # Restituisco sia la perdita che le predizioni (output)
+        return output, loss
 
-    def train_one_epoch(self, loader):
-        """Esegue un'epoca di training su un loader."""
-        print("Un passo di training")
-        self.model.train()
-        optimizer = optim.SGD(self.model.parameters(), lr=self.opt.train.lr, momentum=0.9, weight_decay=0.001)
-        running_loss = 0.0
-
-        for inputs, labels in loader:
-            print("Un batch")
-            inputs, labels = inputs.to(self.opt.device), labels.to(self.opt.device)
-
-            # Azzeramento gradienti
-            optimizer.zero_grad()
-
-            print("Forward pass e backward pass")
-            loss = self.forward_pass(inputs, labels)
-            loss.backward()
-            optimizer.step()
-
-            running_loss += loss.item()
-
-        return running_loss / len(loader)
-
-    def distill_kl_loss(self, student_output, teacher_output, temperature: float):
-        """Calcola la perdita di distillazione usando la KL-divergenza."""
-        student_output = F.log_softmax(student_output / temperature, dim=1)
-        teacher_output = F.softmax(teacher_output / temperature, dim=1)
-        return F.kl_div(student_output, teacher_output, reduction='batchmean') * (temperature ** 2)
 
     
     def eval(self, loader, save_model=True, save_preds=False):
