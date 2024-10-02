@@ -55,7 +55,7 @@ class BaseUnlearningMethod(ABC):
         print("Inizio epoca di training")
         self.model.train()  # Imposta il modello in modalità training
         self.top1.reset()  # Reset della metrica all'inizio dell'epoca
-        runningloss = 0.0
+        running_loss = 0.0
         self.curr_step=0
         # Ciclo principale su ogni batch del loader
         for inputs, labels, infgt in loader:
