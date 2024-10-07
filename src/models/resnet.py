@@ -59,6 +59,10 @@ class ResNet(nn.Module):
         out = self.fc(out)
         return out
 
+    def retrieve_weights(self):
+        weights = model.fc.weight.data
+        bias = model.fc.bias.data
+        return weights, bias
 
 if __name__ == '__main__':
     model = ResNet(ResidualBlock)

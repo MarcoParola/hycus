@@ -14,6 +14,7 @@ from src.unlearning.factory import get_unlearning_method
 from omegaconf import OmegaConf
 from src.utils import get_retain_and_forget_datasets
 from src.dataset_wrapper import DatasetWrapper
+from src.dataset_wrapper_icus import DatasetWrapperIcus
 from src.models.resnet import ResNet, ResidualBlock
 
 
@@ -66,7 +67,7 @@ def main(cfg):
     print("Indici da scordare:", forget_indices)
     retain_indices = [i for i in range(len(train)) if i not in forget_indices]
     if cfg.unlearning_method == 'icus':
-        wrapped_train = DatasetWrapperIcus(train, forget_indices, cfg.icus.input_dim, cfg.icus.nclass)
+        wrapped_train = DatasetWrapperIcus()
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
         retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=4) 

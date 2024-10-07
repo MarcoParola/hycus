@@ -26,3 +26,5 @@ class DatasetWrapper(Dataset):
         input, label = self.dataset[index]
         infgt = 1 if index in self.forget_indices else 0
         return input, label, infgt
+
+    
