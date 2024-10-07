@@ -1,8 +1,10 @@
 import torch
 from abc import ABC, abstractmethod
 from torch.cuda.amp import GradScaler
+import numpy as np
 import torchmetrics
 import tqdm
+import time
 
 class BaseUnlearningMethod(ABC):
     def __init__(self, opt, model, prenet=None):
@@ -20,6 +22,15 @@ class BaseUnlearningMethod(ABC):
         else:
             self.prenet = None
 
+    def unlearn(self, train_loader, test_loader, eval_loaders=None):
+        self.curr_step = 0
+        while self.curr_step < self.opt.train_iters: #finchè non ho finito di trainare
+            time_start = time.process_time() #salvo il tempo di inizio
+            self.train_one_epoch(loader=train_loader) #traino per un'epoca
+            self.curr_step += 1 #incremento il contatore
+            self.eval(test_loader) #valuto
+            self.save_files['train_time_taken'] += time.process_time() - time_start #salvo il tempo impiegato
+        return
 
     def _training_step(self, inputs, labels):
         """Esegue un singolo step di training con supporto per mixed precision."""
@@ -57,7 +68,6 @@ class BaseUnlearningMethod(ABC):
         self.model.train()  # Imposta il modello in modalità training
         self.top1.reset()  # Reset della metrica all'inizio dell'epoca
         running_loss = 0.0
-        self.curr_step=0
         # Ciclo principale su ogni batch del loader
         for inputs, labels, infgt in loader:
             print("Un batch")
@@ -73,17 +83,14 @@ class BaseUnlearningMethod(ABC):
             self.top1.update(preds, labels)
             # Accumula la perdita
             running_loss += loss.item()
-            # Incremento del contatore step
-            self.curr_step += 1
-            # Facoltativo: interrompe se si raggiunge il numero massimo di step
-            if self.curr_step >= self.opt.train_iters:
-                break
         # Calcolo dell'accuratezza dopo aver processato tutti i batch
         top1 = self.top1.compute().item()
         self.top1.reset()  # Reset della metrica per la prossima epoca
         print(f'Step: {self.curr_step} Train Top1: {top1:.3f}, Loss: {running_loss:.4f}')
         return
-    
+    """
+    Guarda a modo cos'è top1
+    """
 
     def eval(self, loader, save_model=True, save_preds=False):
         """Valuta il modello su un dataset e salva il best model basato sulla top-1 accuracy."""

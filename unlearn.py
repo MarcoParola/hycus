@@ -65,10 +65,13 @@ def main(cfg):
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
     print("Indici da scordare:", forget_indices)
     retain_indices = [i for i in range(len(train)) if i not in forget_indices]
-    wrapped_train = DatasetWrapper(train, forget_indices)
-    retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=4) 
-    forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=4)
-    wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4)
+    if cfg.unlearning_method == 'icus':
+        wrapped_train = DatasetWrapperIcus(train, forget_indices, cfg.icus.input_dim, cfg.icus.nclass)
+    else:
+        wrapped_train = DatasetWrapper(train, forget_indices)
+        retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=4) 
+        forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=4)
+        wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4)
 
     # unlearning process
     unlearning_method = cfg.unlearning_method

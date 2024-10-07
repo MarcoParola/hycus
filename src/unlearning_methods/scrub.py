@@ -28,16 +28,17 @@ class Scrub(BaseUnlearningMethod):
     def unlearn(self, train_loader):
         print("Inizio processo di unlearning")
         """Processo di unlearning con massimizzazione/minimizzazione alternata"""
+        self.curr_step=0
         while self.curr_step < self.opt.train_iters:
             if self.curr_step < self.msteps:
                 self.maximize = True
                 self._train_one_phase(loader=self.forget_loader, train_loader=train_loader)
-                self.curr_step += 1
                 self.eval(self.test_loader)
            
+            self.curr_step += 1
             self.maximize = False
             self._train_one_phase(loader=train_loader, train_loader=train_loader)
-            self.curr_step += 1
+            
 
     def distill_kl_loss(self, student_output, teacher_output, temperature):
         """Calcola la perdita di distillazione usando la KL-divergenza."""
@@ -55,6 +56,7 @@ class Scrub(BaseUnlearningMethod):
 
     def forward_pass(self, inputs, target, infgt):
         """Esegue il forward pass e calcola la perdita."""
+        
         inputs, target = inputs.to(self.opt.device), target.to(self.opt.device)        
         # Forward pass del modello attuale (con gradienti abilitati)
         output = self.model(inputs)
