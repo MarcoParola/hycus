@@ -1,8 +1,12 @@
 from torch.utils.data import Dataset
+import torch
+import random
 from src.models.resnet import retrieve_weights
+from transformers import BertModel, BertTokenizer
+
 
 class DatasetWrapperIcus(Dataset):
-    def __init__(self, infgt, cuda=False, model, orig_dataset="cifar10"):
+    def __init__(self, infgt, model, cuda=False, orig_dataset="cifar10"):
         """
         Args:
             classi (Tensor): Tensor contenente le etichette delle classi.
@@ -12,9 +16,10 @@ class DatasetWrapperIcus(Dataset):
             cuda (bool): Se True, carica i dati su GPU.
         """
         if orig_dataset == 'cifar10':
-            classes=["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
-        self.classes = classes  # Tensor delle classi
-        self.descr = calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
+            #classes=["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
+            nclasses = 10
+        self.classes = torch.arange(0, nclasses)
+        self.descr = self.calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
         self.weights, self.bias=retrieve_weights(model)
         self.infgt = infgt  # Tensor dei flag infgt (1 o 0)
         self.cuda = cuda
@@ -26,7 +31,7 @@ class DatasetWrapperIcus(Dataset):
     def __getitem__(self, idx):
         # Estrai la classe, i pesi, la descrizione e il flag infgt in base all'indice
         classe = self.classes[idx]
-        weigths = self.weigths[idx]
+        weigths = self.weights[idx]
         descr = self.descr[idx]
         infgt = self.infgt[idx]
 
@@ -39,7 +44,6 @@ class DatasetWrapperIcus(Dataset):
 
         # Restituisce la tupla (classe, pesi, descrizione, infgt)
         return classe, weigths, descr, infgt
-
 
 
     def calculate_embeddings(self, dataset_name):
@@ -56,11 +60,12 @@ class DatasetWrapperIcus(Dataset):
 
         # List of words to encode
         if dataset_name=='cifar10':
-            text = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"]
-
+            path = "../data/"+dataset_name+"_classes.txt"
+            classes = self.load_words_to_array(path)
+            
         # Tokenize the list of words all together
         encoding = tokenizer.batch_encode_plus(
-            text,
+            classes,
             padding=True,
             truncation=True,
             return_tensors='pt',
@@ -84,6 +89,11 @@ class DatasetWrapperIcus(Dataset):
         print(f"Word Embeddings Shape: {word_embeddings.shape}")
         return word_embeddings
         
-    
+    def load_words_to_array(file_path):
+        # Leggi le parole dal file di testo
+        with open(file_path, 'r') as f:
+            # Rimuovi eventuali spazi bianchi e newline, e crea una lista di parole
+            words = [line.strip() for line in f if line.strip()]
+        return words    
                 
 

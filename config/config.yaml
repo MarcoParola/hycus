@@ -17,7 +17,7 @@ dataset:
   classes: 10
   resize: 224
 
-device: "cpu"
+device: "cuda"
 
 train:
   batch_size: 16

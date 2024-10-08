@@ -1,6 +1,7 @@
 import hydra
 import torch
 import os
+import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
@@ -16,6 +17,7 @@ from src.utils import get_retain_and_forget_datasets
 from src.dataset_wrapper import DatasetWrapper
 from src.dataset_wrapper_icus import DatasetWrapperIcus
 from src.models.resnet import ResNet, ResidualBlock
+from src.unlearning_methods.icus import Icus
 
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
@@ -57,32 +59,39 @@ def main(cfg):
     # compute classification metrics
     num_classes = cfg[cfg.dataset.name].n_classes
     forgetting_subset = get_forgetting_subset(cfg.forgetting_set, cfg[cfg.dataset.name].n_classes, cfg.forgetting_set_size)
-    #metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
-    #for k, v in metrics.items():
-    #    print(f'{k}: {v}')
+    metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
+    for k, v in metrics.items():
+        print(f'{k}: {v}')
 
-    #NOTA BENE: FORSE FORGETTING SUBSET NON SERVE PIU' PERCHE' LO RICAVO DIRETTAMENTE DAI DATI
     print("Wrapper datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
-    print("Indici da scordare:", forget_indices)
+    #print("Indici da scordare:", forget_indices)
     retain_indices = [i for i in range(len(train)) if i not in forget_indices]
-    if cfg.unlearning_method == 'icus':
-        wrapped_train = DatasetWrapperIcus()
+    # unlearning process
+    unlearning_method = cfg.unlearning_method
+    
+    if unlearning_method == 'icus':
+        infgt = np.zeros(num_classes)
+        for i in forgetting_subset:
+            infgt[i] = 1
+        cuda = True if cfg.device == 'cuda' else False
+        wrapped_train = DatasetWrapperIcus(infgt, model, cuda, orig_dataset=cfg.dataset.name)
+        wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=4) #SHUFFLE ?????
+        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset) #128 perchè CIFAR10 probabilmente serve una logica per trovare il valore    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
         retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=4) 
         forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=4)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4)
-
-    # unlearning process
-    unlearning_method = cfg.unlearning_method
-    unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, cfg)
+        unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, cfg)
     if unlearning_method == 'scrub':
         unlearning.unlearn(wrapped_train_loader)
     elif unlearning_method == 'badT':
         unlearning.unlearn(wrapped_train_loader, test_loader, forgetting_subset)
     elif unlearning_method == 'ssd':
         unlearning.unlearn(wrapped_train_loader, test_loader, forget_loader)
+    elif unlearning_method == 'icus':
+        unlearning.unlearn(model, wrapped_train_loader)
     else:
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics

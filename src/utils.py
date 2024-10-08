@@ -236,3 +236,8 @@ def ssd_tuning(
     pdr.modify_weight(original_importances, sample_importances)
     return model
  
+
+def retrieve_weights(model):
+    weights = model.fc.weight.data
+    bias = model.fc.bias.data
+    return weights, bias
