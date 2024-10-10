@@ -59,9 +59,9 @@ def main(cfg):
     # compute classification metrics
     num_classes = cfg[cfg.dataset.name].n_classes
     forgetting_subset = get_forgetting_subset(cfg.forgetting_set, cfg[cfg.dataset.name].n_classes, cfg.forgetting_set_size)
-    metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
-    for k, v in metrics.items():
-        print(f'{k}: {v}')
+    #metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
+    #for k, v in metrics.items():
+    #    print(f'{k}: {v}')
 
     print("Wrapper datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
@@ -95,7 +95,9 @@ def main(cfg):
     else:
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics
-
+    metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
+    print("Accuracy forget ", metrics['accuracy_forgetting'])
+    print("Accuracy retain ", metrics['accuracy_retaining'])
 
 
 

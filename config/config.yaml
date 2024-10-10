@@ -7,7 +7,7 @@ currentDir: ${hydra:runtime.cwd}
 seed: 42
 
 model: resnet
-unlearning_method: scrub
+unlearning_method: icus
 forgetting_set: random
 forgetting_set_size: 4
 
@@ -17,7 +17,7 @@ dataset:
   classes: 10
   resize: 224
 
-device: "cuda"
+device: "cpu"
 
 train:
   batch_size: 16

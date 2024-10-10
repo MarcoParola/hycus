@@ -33,7 +33,6 @@ class Scrub(BaseUnlearningMethod):
             if self.curr_step < self.msteps:
                 self.maximize = True
                 self._train_one_phase(loader=self.forget_loader, train_loader=train_loader)
-                self.eval(self.test_loader)
            
             self.curr_step += 1
             self.maximize = False
@@ -51,7 +50,6 @@ class Scrub(BaseUnlearningMethod):
         time_start = time.process_time()
         self.train_one_epoch(loader=loader)
         self.save_files['train_time_taken'] += time.process_time() - time_start
-        #self.eval(loader=self.test_loader)  
         self.eval(self.test_loader)
 
     def forward_pass(self, inputs, target, infgt):
