@@ -11,7 +11,7 @@ class BaseUnlearningMethod(ABC):
         self.opt = opt
         self.model = model.to(opt.device)
         self.best_top1 = 0
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001, momentum=0.9, weight_decay=0.001)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001)
         self.top1 = torchmetrics.Accuracy(task="multiclass", num_classes=10)
         self.scaler = GradScaler()  # Aggiunto per supportare mixed precision
         self.save_files = {"train_time_taken": 0}  # Inizializzazione log

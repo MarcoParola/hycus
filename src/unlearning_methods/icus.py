@@ -16,25 +16,25 @@ class Icus(BaseUnlearningMethod):
         self.fc = model.fc
         # Inizializza le descrizioni e altri componenti necessari
         self.description = wrapped_train_loader.dataset.descr
-        print("Description shape: ", self.description.shape)
         flatten_description = self.description.view(nclass, -1)
-        print("Flatten description shape: ", flatten_description.shape)
         self.forgetting_subset = forgetting_subset
         weights, bias = retrieve_weights(model)
         self.device = opt.device
         # Concatenazione dei pesi e bias, assicurati che il bias abbia forma corretta
         self.weights = torch.cat((weights, bias.view(-1, 1)), dim=1)
-        print("Weights shape: ", self.weights.shape)
         # Ottieni il numero di input features dai pesi
         # Definizione degli autoencoder
         descr_ae = Autoencoder(opt, flatten_description.shape[1], embed_dim=512, num_layers=2)  
+        descr_ae.to(opt.device)
         weights_ae = Autoencoder(opt, self.weights.shape[1], embed_dim=512, num_layers=2) 
+        weights_ae.to(opt.device)
         # Joint Autoencoder
-        self.joint_ae = JointAutoencoder(descr_ae, weights_ae)
+        self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Ottimizzatori per gli autoencoder
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae1.parameters(), lr=0.001)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae2.parameters(), lr=0.001)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae1.parameters(), lr=0.0001)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae2.parameters(), lr=0.0001)
+        self.optimizer = optim.Adam(self.model.fc.parameters(), lr=0.0001)
         
 
     def last_layer_weights(self, target):
@@ -45,13 +45,15 @@ class Icus(BaseUnlearningMethod):
 
     # Ciclo di unlearning
     def unlearn(self, model, train_loader):
-        model.train()  # Imposta il modello in modalità di addestramento
         self.current_step = 0
         for epoch in range(self.opt.train.max_epochs):
             print("Epoca: ", epoch)
             self.train_one_epoch(train_loader)
+        print("Modello originale: ", self.fc.weight.data)
+        print("Modello finale: ", self.model.fc.weight.data)
+        return self.model
 
-    def train_one_epoch(self, loader):
+    """def train_one_epoch(self, loader):
         print("Inizio epoca di training")
         self.joint_ae.train()  # Imposta il Joint Autoencoder in modalità training
         running_loss = 0.0
@@ -74,7 +76,7 @@ class Icus(BaseUnlearningMethod):
             for i in self.forgetting_subset:
                 weights[i] = torch.randn_like(weights[i])
             # Forward pass
-            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights))
+            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
             latent_distance = self.icus_distance(latent_att, latent_weight)
             print(f"Latent distance: {latent_distance}")
             # Calcola la perdita
@@ -97,7 +99,6 @@ class Icus(BaseUnlearningMethod):
             print(f"Forget loss: {forget_loss}")
             ##########################################
             loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att)
-            loss += latent_distance.mean()
             # Backward pass
             self.descr_optimizer.zero_grad()
             self.weights_optimizer.zero_grad()
@@ -109,7 +110,58 @@ class Icus(BaseUnlearningMethod):
             self.optimizer.zero_grad()  # Azzerare i gradienti
             self.optimizer.step()  # Aggiorna i pesi del modello
 
+        print(f"Loss medio di epoca: {running_loss / len(loader)}")"""
+
+    def train_one_epoch(self, loader):
+        print("Inizio epoca di training")
+        self.joint_ae.train()  # Imposta il Joint Autoencoder in modalità training
+        self.model.train()  # Imposta il modello in modalità di addestramento
+        running_loss = 0.0
+
+        for batch in loader:
+            # Estrai il batch e trasferisci su GPU se necessario
+            targets, weights, descr, infgt = batch
+            weights, descr, infgt, targets = weights.to(self.device), descr.to(self.device), infgt.to(self.device), targets.to(self.device)
+            
+            # Modifica il target se necessario
+            for target in targets:
+                orig_target = target
+                if target in self.forgetting_subset:
+                    while target == orig_target:
+                        target = random.randint(0, 9)
+
+            descr = descr.view(descr.size(0), -1)  # Output: torch.Size([10, 2304])
+
+            # Aggiorna i pesi per i dati dimenticati
+            for i in self.forgetting_subset:
+                weights[i] = torch.randn_like(weights[i], requires_grad=True)
+
+            # Forward pass
+            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
+
+            # Calcola la perdita
+            loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att)
+            print("Perdita:", loss.item())  # Stampa la perdita
+
+            # Backward pass
+            self.descr_optimizer.zero_grad()
+            self.weights_optimizer.zero_grad()
+            self.optimizer.zero_grad()  # Azzera i gradienti per il modello principale
+
+            loss.backward()  # Calcola il backpropagation
+            print("Gradienti dei pesi:", self.fc.weight.grad)  # Verifica i gradienti
+            print("Gradienti dei pesi del primo autoencoder:", self.joint_ae.ae1.encoder[0].weight.grad)
+            print("Gradienti dei pesi del secondo autoencoder:", self.joint_ae.ae2.encoder[0].weight.grad)
+
+            self.descr_optimizer.step()  # Aggiorna gli autoencoder
+            self.weights_optimizer.step()  # Aggiorna gli autoencoder
+            self.optimizer.step()  # Aggiorna i pesi del modello principale
+
+            running_loss += loss.item()
+
         print(f"Loss medio di epoca: {running_loss / len(loader)}")
+
+
 
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att):
         loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight)

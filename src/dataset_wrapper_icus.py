@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 import torch
 import random
+import numpy as np
 from src.utils import retrieve_weights
 from transformers import BertModel, BertTokenizer
 
@@ -38,10 +39,12 @@ class DatasetWrapperIcus(Dataset):
 
         # Se richiesto, trasferisci su GPU
         if self.cuda:
-            classe = classe.cuda()
-            weigths = weigths.cuda()
-            descr = descr.cuda()
-            infgt = infgt.cuda()
+            classe = classe.to('cuda')
+            weigths = weigths.to('cuda')
+            descr = descr.to('cuda')
+            if isinstance(infgt, (np.float64, float)):  # Controlla se è di tipo numpy.float64 o float
+                infgt = torch.tensor(infgt, dtype=torch.float)
+            infgt = infgt.to('cuda')
 
         # Restituisce la tupla (classe, pesi, descrizione, infgt)
         return classe, weigths, descr, infgt

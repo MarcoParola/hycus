@@ -59,9 +59,9 @@ def main(cfg):
     # compute classification metrics
     num_classes = cfg[cfg.dataset.name].n_classes
     forgetting_subset = get_forgetting_subset(cfg.forgetting_set, cfg[cfg.dataset.name].n_classes, cfg.forgetting_set_size)
-    #metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
-    #for k, v in metrics.items():
-    #    print(f'{k}: {v}')
+    metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
+    for k, v in metrics.items():
+        print(f'{k}: {v}')
 
     print("Wrapper datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
@@ -76,7 +76,7 @@ def main(cfg):
             infgt[i] = 1
         cuda = True if cfg.device == 'cuda' else False
         wrapped_train = DatasetWrapperIcus(infgt, model, cuda, orig_dataset=cfg.dataset.name)
-        wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=4) #SHUFFLE ?????
+        wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=0) #SHUFFLE ?????
         unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset) #128 perchè CIFAR10 probabilmente serve una logica per trovare il valore    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
@@ -91,11 +91,11 @@ def main(cfg):
     elif unlearning_method == 'ssd':
         unlearning.unlearn(wrapped_train_loader, test_loader, forget_loader)
     elif unlearning_method == 'icus':
-        unlearning.unlearn(model, wrapped_train_loader)
+        new_model=unlearning.unlearn(model, wrapped_train_loader)
     else:
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics
-    metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
+    metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     print("Accuracy forget ", metrics['accuracy_forgetting'])
     print("Accuracy retain ", metrics['accuracy_retaining'])
 
