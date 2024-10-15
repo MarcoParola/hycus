@@ -3,6 +3,7 @@ from pytorch_lightning.callbacks.early_stopping import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import Subset
 import torch
+from torch.optim.lr_scheduler import _LRScheduler
 from typing import Dict, List
 from torch.utils.data import DataLoader
 import tqdm
@@ -225,7 +226,7 @@ def ssd_tuning(
     }
 
     # load the trained model
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.001)
 
     pdr = ParameterPerturber(model, optimizer, device, parameters)
     model = model.eval()
@@ -241,3 +242,40 @@ def retrieve_weights(model):
     weights = model.fc.weight.data
     bias = model.fc.bias.data
     return weights, bias
+
+
+class LinearLR(_LRScheduler):
+    """Set the learning rate of each parameter group with a linear
+    schedule: :math:`\eta_{t} = \eta_0*(1 - t/T)`, where :math:`\eta_0` is the
+    initial lr, :math:`t` is the current epoch or iteration (zero-based) and
+    :math:`T` is the total training epochs or iterations. It is recommended to
+    use the iteration based calculation if the total number of epochs is small.
+    When last_epoch=-1, sets initial lr as lr.
+    It is studied in
+    `Budgeted Training: Rethinking Deep Neural Network Training Under Resource
+     Constraints`_.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        T (int): Total number of training epochs or iterations.
+        last_epoch (int): The index of last epoch or iteration. Default: -1.
+        
+    .. _Budgeted Training\: Rethinking Deep Neural Network Training Under
+    Resource Constraints:
+        https://arxiv.org/abs/1905.04753
+    """
+
+    def __init__(self, optimizer, T, warmup_epochs=100, last_epoch=-1):
+        self.T = float(T)
+        self.warm_ep = warmup_epochs
+        super(LinearLR, self).__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        if self.last_epoch - self.warm_ep >= 0:
+            rate = (1 - ((self.last_epoch-self.warm_ep)/self.T))
+        else:
+            rate = (self.last_epoch+1)/(self.warm_ep+1)
+        return [rate*base_lr for base_lr in self.base_lrs]
+
+    def _get_closed_form_lr(self):
+        return self.get_lr()

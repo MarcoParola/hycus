@@ -20,14 +20,15 @@ dataset:
 device: "cuda"
 
 train:
-  batch_size: 16
-  max_epochs: 20
-  lr: 1e-6
+  batch_size: 64
+  max_epochs: 10
+  lr: 1e-3
   save_path: ./models
   num_workers: 1
   patience: 10
 
-train_iters: 100
+train_iters: 2000
+max_epochs: 5
 
 log:
   path: ./logs

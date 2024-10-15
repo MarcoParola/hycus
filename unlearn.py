@@ -22,8 +22,6 @@ from src.unlearning_methods.icus import Icus
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
 def main(cfg):
-
-    print("Inizio unlearning")
     # Set seed
     if cfg.seed == -1:
         random_data = os.urandom(4)
@@ -80,14 +78,14 @@ def main(cfg):
         unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset) #128 perchè CIFAR10 probabilmente serve una logica per trovare il valore    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
-        retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=4) 
-        forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=4)
-        wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=4)
-        unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, cfg)
+        retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=8) 
+        forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=8)
+        wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=8)
+        unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, cfg, forgetting_subset)
     if unlearning_method == 'scrub':
         unlearning.unlearn(wrapped_train_loader)
     elif unlearning_method == 'badT':
-        unlearning.unlearn(wrapped_train_loader, test_loader, forgetting_subset)
+        unlearning.unlearn(wrapped_train_loader, test_loader)
     elif unlearning_method == 'ssd':
         unlearning.unlearn(wrapped_train_loader, test_loader, forget_loader)
     elif unlearning_method == 'icus':
@@ -95,9 +93,12 @@ def main(cfg):
     else:
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics
-    metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
-    print("Accuracy forget ", metrics['accuracy_forgetting'])
-    print("Accuracy retain ", metrics['accuracy_retaining'])
+    if unlearning_method == 'icus':
+        unlearning.test_unlearning_effect(test_loader, forgetting_subset)
+    else:
+        metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
+        print("Accuracy forget ", metrics['accuracy_forgetting'])
+        print("Accuracy retain ", metrics['accuracy_retaining'])
 
 
 

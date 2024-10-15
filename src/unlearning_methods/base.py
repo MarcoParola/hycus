@@ -1,33 +1,38 @@
 import torch
 from abc import ABC, abstractmethod
 from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast
 import numpy as np
 import torchmetrics
+import copy
 import tqdm
 import time
+from src.utils import LinearLR
 
 class BaseUnlearningMethod(ABC):
-    def __init__(self, opt, model, prenet=None):
+    def __init__(self, opt, model, forgetting_set=None, prenet=None):
         self.opt = opt
         self.model = model.to(opt.device)
-        self.best_top1 = 0
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.001)
-        self.top1 = torchmetrics.Accuracy(task="multiclass", num_classes=10)
+        #self.save_files = {'train_top1':[], 'val_top1':[], 'train_time_taken':0}
+        self.best_top1 = -1
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0025)
+        self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
+        self.top1 = -1
         self.scaler = GradScaler()  # Aggiunto per supportare mixed precision
         self.save_files = {"train_time_taken": 0}  # Inizializzazione log
-        
         # Prenet opzionale
         if prenet is not None:
             self.prenet = prenet.to(opt.device)
         else:
             self.prenet = None
 
-    def unlearn(self, train_loader, test_loader, eval_loaders=None):
-        self.curr_step = 0
-        while self.curr_step < self.opt.train_iters: #finchè non ho finito di trainare
+    def unlearn(self, train_loader, test_loader):
+        self.epoch = 0
+        while self.epoch < self.opt.max_epochs: #finchè non ho finito di trainare
+            #self.curr_step = 0
             time_start = time.process_time() #salvo il tempo di inizio
             self.train_one_epoch(loader=train_loader) #traino per un'epoca
-            self.curr_step += 1 #incremento il contatore
+            self.epoch += 1
             self.eval(test_loader) #valuto
             self.save_files['train_time_taken'] += time.process_time() - time_start #salvo il tempo impiegato
         return
@@ -35,6 +40,7 @@ class BaseUnlearningMethod(ABC):
     def _training_step(self, inputs, labels):
         """Esegue un singolo step di training con supporto per mixed precision."""
         inputs, labels = inputs.to(self.opt.device), labels.to(self.opt.device)
+        print(f"Inputs are on device: {inputs.device}, Labels are on device: {labels.device}")
         
         with torch.cuda.amp.autocast():
             outputs = self.model(inputs)
@@ -64,38 +70,39 @@ class BaseUnlearningMethod(ABC):
 
     def train_one_epoch(self, loader):
         """Esegue un'epoca di training su un loader."""
+        self.epoch += 1
         print("Inizio epoca di training")
         self.model.train()  # Imposta il modello in modalità training
-        self.top1.reset()  # Reset della metrica all'inizio dell'epoca
-        running_loss = 0.0
+
         # Ciclo principale su ogni batch del loader
-        for inputs, labels, infgt in loader:
-            print("Un batch")
+        for inputs, labels, infgt in tqdm.tqdm(loader):
             inputs, labels, infgt = inputs.to(self.opt.device), labels.to(self.opt.device), infgt.to(self.opt.device)
-            # Azzeramento dei gradienti
-            self.optimizer.zero_grad()
-            # Eseguiamo il forward pass e calcoliamo la perdita
-            preds, loss = self.forward_pass(inputs, labels, infgt)
-            # Backward pass e aggiornamento pesi
-            loss.backward()
-            self.optimizer.step()
-            # Aggiornamento della metrica per il batch corrente
-            self.top1.update(preds, labels)
-            # Accumula la perdita
-            running_loss += loss.item()
-        # Calcolo dell'accuratezza dopo aver processato tutti i batch
-        top1 = self.top1.compute().item()
-        self.top1.reset()  # Reset della metrica per la prossima epoca
-        print(f'Step: {self.curr_step} Train Top1: {top1:.3f}, Loss: {running_loss:.4f}')
+            with autocast(): 
+                # Azzeramento dei gradienti
+                self.optimizer.zero_grad()
+                # Eseguiamo il forward pass e calcoliamo la perdita
+                preds, loss = self.forward_pass(inputs, labels, infgt)
+                #preds = torch.argmax(preds, dim=1)
+                self.scaler.scale(loss).backward()  #calcolo i gradienti e applico la backpropagation
+                self.scaler.step(self.optimizer) #aggiorno i pesi
+                self.scaler.update() #aggiorno lo scaler
+                self.scheduler.step() #aggiorno il learning rate
+                self.curr_step += 1
+                if self.curr_step > self.opt.train_iters:
+                    break
+                
+        print(f'Epoca: {self.epoch}')
         return
-    """
-    Guarda a modo cos'è top1
-    """
+    
 
     def eval(self, loader, save_model=True, save_preds=False):
         """Valuta il modello su un dataset e salva il best model basato sulla top-1 accuracy."""
         self.model.eval()   # Imposta il modello in modalità di valutazione
-        self.top1.reset()   # Resetta il calcolo dell'accuracy
+        self.top1 = -1   # Resetta il calcolo dell'accuracy
+        correct_retain=0
+        correct_forget=0
+        total_retain=0
+        total_forget=0
 
         if save_preds:
             preds, targets = [], []  # Liste per salvare predizioni e target
@@ -107,23 +114,33 @@ class BaseUnlearningMethod(ABC):
                 output = self.model(images) if self.prenet is None else self.model(self.prenet(images))  # Forward pass
 
                 # Calcola l'accuracy
-                self.top1.update(output, target)
+                # self.top1.update(output, target)
+                _, preds = torch.max(output, 1)
+                for t, p in zip(target, preds):
+                    if t in self.forgetting_set:
+                        if p==t:
+                            correct_forget+=1
+                        total_forget+=1
+                    else:
+                        if p==t:
+                            correct_retain+=1
+                        total_retain+=1
 
                 if save_preds:  # Salva le predizioni e i target
                     preds.append(output.cpu().numpy())
                     targets.append(target.cpu().numpy())
 
         # Calcola l'accuratezza top-1
-        top1 = self.top1.compute().item()  
-        self.top1.reset()
+        top1 = (correct_retain/total_retain) - (correct_forget/total_forget)
+        self.top1 = -1
 
         # Stampa l'accuratezza
         if not save_preds:
-            print(f'Step: {self.curr_step} Val Top1: {top1*100:.2f}%')
+            print(f'Epoca: {self.epoch} Val Top1: {top1*100:.2f}%')
 
         # Se è abilitato il salvataggio del modello
         if save_model:
-            self.save_files['val_top1'].append(top1)  # Salva l'accuratezza nel log
+            #self.save_files['val_top1'].append(top1)  # Salva l'accuratezza nel log
             if top1 > self.best_top1:  # Se è la migliore accuratezza finora
                 self.best_top1 = top1  # Aggiorna la best_top1
                 self.best_model = copy.deepcopy(self.model).cpu()  # Salva il modello migliore
