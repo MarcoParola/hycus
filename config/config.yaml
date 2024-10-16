@@ -9,7 +9,7 @@ seed: 42
 model: resnet
 unlearning_method: icus
 forgetting_set: random
-forgetting_set_size: 4
+forgetting_set_size: 2
 
 dataset: 
   name: cifar10

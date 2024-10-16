@@ -94,7 +94,8 @@ def main(cfg):
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics
     if unlearning_method == 'icus':
-        unlearning.test_unlearning_effect(test_loader, forgetting_subset)
+        accuracy_retain, accuracy_forget=unlearning.test_unlearning_effect(test_loader, forgetting_subset)
+        loggers.log_metrics({'accuracy_retain': accuracy_retain, 'accuracy_forget': accuracy_forget})
     else:
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
         print("Accuracy forget ", metrics['accuracy_forgetting'])

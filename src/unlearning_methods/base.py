@@ -93,7 +93,7 @@ class BaseUnlearningMethod(ABC):
                 
         print(f'Epoca: {self.epoch}')
         return
-    
+
 
     def eval(self, loader, save_model=True, save_preds=False):
         """Valuta il modello su un dataset e salva il best model basato sulla top-1 accuracy."""

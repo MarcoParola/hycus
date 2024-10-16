@@ -32,8 +32,8 @@ class Icus(BaseUnlearningMethod):
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Autoencoder optimizers
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae1.parameters(), lr=0.0005)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae2.parameters(), lr=0.0005)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae1.parameters(), lr=0.0007)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae2.parameters(), lr=0.0007)
         self.optimizer = optim.Adam(self.model.fc.parameters(), lr=0.001)
         
 
@@ -47,9 +47,9 @@ class Icus(BaseUnlearningMethod):
     def unlearn(self, model, train_loader):
         self.model.fc.weight.requires_grad_(True)
         self.current_step = 0
-        for epoch in range(20):
+        for epoch in range(self.opt.max_epochs):
             print("Epoca: ", epoch)
-            self.train_one_epoch(train_loader)
+            self.train_one_epoch(train_loader) #anche val_loader
         print("Modello originale: ", self.fc.weight.data)
         print("Modello finale: ", self.model.fc.weight.data)
         return self.model
@@ -181,3 +181,4 @@ class Icus(BaseUnlearningMethod):
         print(f'Accuracy retain ICUS on test set: {accuracy_retain:.2f}%')
         print(f'Accuracy forget ICUS on test set: {accuracy_forget:.2f}%')
         print(f'Improved accuracy: {improved}')
+        return accuracy_retain, accuracy_forget
