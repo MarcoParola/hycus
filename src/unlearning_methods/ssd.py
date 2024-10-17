@@ -9,8 +9,9 @@ import tqdm
 
 
 class SSD(BaseUnlearningMethod):
-    def __init__(self, opt, model, prenet=None):
+    def __init__(self, opt, model, logger, prenet=None):
         super().__init__(opt, model, prenet)
+        self.logger = logger
 
     def unlearn(self, wrapped_train_loader, test_loader, forget_loader):
         actual_iters = self.opt.train_iters

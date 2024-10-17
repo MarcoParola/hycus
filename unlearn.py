@@ -25,6 +25,7 @@ def main(cfg):
     # Set seed
     if cfg.seed == -1:
         random_data = os.urandom(4)
+        print("Random classes: ", random_data)
         seed = int.from_bytes(random_data, byteorder="big")
         cfg.seed = seed
     torch.manual_seed(cfg.seed)    
@@ -42,6 +43,11 @@ def main(cfg):
         num_workers=cfg.train.num_workers)
 
     train_loader = torch.utils.data.DataLoader(train, 
+        batch_size=cfg.train.batch_size, 
+        shuffle=False, 
+        num_workers=cfg.train.num_workers)
+    
+    val_loader = torch.utils.data.DataLoader(val, 
         batch_size=cfg.train.batch_size, 
         shuffle=False, 
         num_workers=cfg.train.num_workers)
@@ -63,11 +69,13 @@ def main(cfg):
 
     print("Wrapper datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
+    forget_indices_val = [i for i in range(len(val)) if val[i][1] in forgetting_subset]
     #print("Indici da scordare:", forget_indices)
     retain_indices = [i for i in range(len(train)) if i not in forget_indices]
     # unlearning process
     unlearning_method = cfg.unlearning_method
-    
+    wrapped_val = DatasetWrapper(val, forget_indices_val)
+    wrapped_val_loader = DataLoader(wrapped_val, batch_size=cfg.train.batch_size, shuffle=True, num_workers=8)
     if unlearning_method == 'icus':
         infgt = np.zeros(num_classes)
         for i in forgetting_subset:
@@ -75,17 +83,17 @@ def main(cfg):
         cuda = True if cfg.device == 'cuda' else False
         wrapped_train = DatasetWrapperIcus(infgt, model, cuda, orig_dataset=cfg.dataset.name)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=0) #SHUFFLE ?????
-        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset) #128 perchè CIFAR10 probabilmente serve una logica per trovare il valore    
+        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 perchè CIFAR10 probabilmente serve una logica per trovare il valore    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
         retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=8) 
         forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=8)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=8)
-        unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, cfg, forgetting_subset)
+        unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, wrapped_val_loader, cfg, forgetting_subset, loggers)
     if unlearning_method == 'scrub':
         unlearning.unlearn(wrapped_train_loader)
     elif unlearning_method == 'badT':
-        unlearning.unlearn(wrapped_train_loader, test_loader)
+        unlearning.unlearn(wrapped_train_loader, test_loader, wrapped_val_loader)
     elif unlearning_method == 'ssd':
         unlearning.unlearn(wrapped_train_loader, test_loader, forget_loader)
     elif unlearning_method == 'icus':
@@ -94,7 +102,7 @@ def main(cfg):
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics
     if unlearning_method == 'icus':
-        accuracy_retain, accuracy_forget=unlearning.test_unlearning_effect(test_loader, forgetting_subset)
+        accuracy_retain, accuracy_forget=unlearning.test_unlearning_effect(test_loader, forgetting_subset, epoch=cfg.max_epochs)
         loggers.log_metrics({'accuracy_retain': accuracy_retain, 'accuracy_forget': accuracy_forget})
     else:
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)

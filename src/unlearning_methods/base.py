@@ -26,14 +26,14 @@ class BaseUnlearningMethod(ABC):
         else:
             self.prenet = None
 
-    def unlearn(self, train_loader, test_loader):
+    def unlearn(self, train_loader, test_loader, val_loader=None):
         self.epoch = 0
         while self.epoch < self.opt.max_epochs: #finchè non ho finito di trainare
             #self.curr_step = 0
             time_start = time.process_time() #salvo il tempo di inizio
             self.train_one_epoch(loader=train_loader) #traino per un'epoca
             self.epoch += 1
-            self.eval(test_loader) #valuto
+            self.validate(val_loader) #valuto
             self.save_files['train_time_taken'] += time.process_time() - time_start #salvo il tempo impiegato
         return
 
@@ -82,6 +82,7 @@ class BaseUnlearningMethod(ABC):
                 self.optimizer.zero_grad()
                 # Eseguiamo il forward pass e calcoliamo la perdita
                 preds, loss = self.forward_pass(inputs, labels, infgt)
+                self.logger.log_metrics({"method":self.opt.unlearning_method, "loss": loss.item()}, step=self.curr_step)
                 #preds = torch.argmax(preds, dim=1)
                 self.scaler.scale(loss).backward()  #calcolo i gradienti e applico la backpropagation
                 self.scaler.step(self.optimizer) #aggiorno i pesi
@@ -153,3 +154,40 @@ class BaseUnlearningMethod(ABC):
             targets = np.concatenate(targets, axis=0)
             return preds, targets  # Ritorna predizioni e target
         return
+
+    def validate(self, val_loader):
+        print("Start validation")
+        self.model.eval()  # Imposta il modello in modalità valutazione
+        correct_forget = 0
+        total_forget = 0
+        correct_retain = 0
+        total_retain = 0
+
+        with torch.no_grad():  # Disattiva il calcolo dei gradienti durante la validazione
+
+            for inputs, targets, infgt in val_loader:
+                inputs, targets, infgt = inputs.to(self.opt.device), targets.to(self.opt.device), infgt.to(self.opt.device)
+                outputs = self.model(inputs)
+                for i, o, t in zip(infgt, outputs, targets):
+                    pred = torch.argmax(o)
+                    print(f"Predizione: {pred}, Target: {t}", "Forget" if i == 1 else "Retain")
+                    if i == 1:
+                        if pred==t:
+                            correct_forget+=1
+                        total_forget+=1
+                    else:
+                        if pred==t:
+                            correct_retain+=1
+                    total_retain+=1
+        
+        accuracy_retain = correct_retain / total_retain
+        accuracy_forget = correct_forget / total_forget
+
+        # Puoi anche loggare i risultati della validazione, ad esempio su Weights & Biases
+        self.logger.log_metrics({
+            "validation_retain_accuracy": accuracy_retain,
+            "validation_forget_accuracy": accuracy_forget,
+            "step": self.curr_step if hasattr(self, "curr_step") else self.epoch
+        })
+        
+        self.model.train()  # Torna in modalità training per il prossimo ciclo

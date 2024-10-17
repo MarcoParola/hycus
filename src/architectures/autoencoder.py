@@ -51,35 +51,35 @@ class Autoencoder(nn.Module):
         return self.decoder(z)
     
 class JointAutoencoder(nn.Module):
-    def __init__(self, autoencoder1, autoencoder2, device):
+    def __init__(self, autoencoder_descr, autoencoder_weight, device):
         super(JointAutoencoder, self).__init__()
-        self.ae1 = autoencoder1
-        self.ae2 = autoencoder2
+        self.ae_d = autoencoder_descr
+        self.ae_w = autoencoder_weight
         self.device = device
     
-    def encode1(self, x): 
-        return self.ae1.encode(x)
+    def encode_descr(self, x): 
+        return self.ae_d.encode(x)
 
-    def encode2(self, x):
-        return self.ae2.encode(x)
+    def encode_weight(self, x):
+        return self.ae_w.encode(x)
 
-    def decode1(self, x):
-        return self.ae1.decode(x)
+    def decode_descr(self, x):
+        return self.ae_d.decode(x)
 
-    def decode2(self, x):
-        return self.ae2.decode(x)
+    def decode_weight(self, x):
+        return self.ae_w.decode(x)
         
     def forward(self, x):
-        att_in, weight_in, _ = x  
-        att_in = att_in.to(self.device)  
+        descr_in, weight_in, _ = x  
+        descr_in = descr_in.to(self.device)  
         weight_in = weight_in.to(self.device) 
 
-        latent_att = self.encode1(att_in)
-        latent_weight = self.encode2(weight_in)
+        latent_descr = self.encode_descr(descr_in)
+        latent_weight = self.encode_weight(weight_in)
         
-        att_from_att = self.decode1(latent_att)
-        att_from_weight = self.decode1(latent_weight)
-        weight_from_weight = self.decode2(latent_weight)
-        weight_from_att = self.decode2(latent_att)
+        descr_from_descr = self.decode_descr(latent_descr)
+        descr_from_weight = self.decode_descr(latent_weight)
+        weight_from_weight = self.decode_weight(latent_weight)
+        weight_from_descr = self.decode_weight(latent_descr)
         
-        return att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight
+        return descr_from_descr, descr_from_weight, weight_from_weight, weight_from_descr, latent_descr, latent_weight

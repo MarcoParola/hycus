@@ -4,12 +4,13 @@ defaults:
   - target_layers
 
 currentDir: ${hydra:runtime.cwd}
-seed: 42
+seed: -1
 
 model: resnet
 unlearning_method: icus
+forgetting_set_strategy: random_values
 forgetting_set: random
-forgetting_set_size: 2
+forgetting_set_size: 3
 
 dataset: 
   name: cifar10
@@ -21,14 +22,14 @@ device: "cuda"
 
 train:
   batch_size: 64
-  max_epochs: 10
+  max_epochs: 20
   lr: 1e-3
   save_path: ./models
   num_workers: 1
   patience: 10
 
-train_iters: 2000
-max_epochs: 5
+train_iters: 250
+max_epochs: 10
 
 log:
   path: ./logs
