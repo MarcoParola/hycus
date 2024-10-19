@@ -7,10 +7,10 @@ currentDir: ${hydra:runtime.cwd}
 seed: -1
 
 model: resnet
-unlearning_method: icus
+unlearning_method: ssd
 forgetting_set_strategy: random_values
 forgetting_set: random
-forgetting_set_size: 3
+forgetting_set_size: 4
 
 dataset: 
   name: cifar10
@@ -19,6 +19,8 @@ dataset:
   resize: 224
 
 device: "cuda"
+SSDdampening: 0.5
+SSDselectwt: 0.1
 
 train:
   batch_size: 64

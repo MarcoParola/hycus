@@ -86,7 +86,7 @@ class Icus(BaseUnlearningMethod):
                 elif self.opt.forgetting_set_strategy == "random_class":
                     j=i
                     while j in self.forgetting_subset:
-                        j = random.randint(0, 9)
+                        j = random.randint(0, 9) #TODO: check if we can faster self.opt.dataset.classes
                     weights[i] = weights[j]
                 elif self.opt.forgetting_set_strategy == "zeros":
                     weights[i] = torch.zeros_like(weights[i], requires_grad=True)
