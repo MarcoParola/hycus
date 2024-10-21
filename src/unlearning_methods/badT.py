@@ -6,7 +6,7 @@ from torch.cuda.amp import autocast, GradScaler
 from src.unlearning_methods.base import BaseUnlearningMethod
 
 class BadT(BaseUnlearningMethod):
-    def __init__(self, opt, model, retain_loader, forget_loader, forgetting_set, logger=None):
+    def __init__(self, opt, model, forgetting_set, logger=None):
         super().__init__(opt, model)
         print("Inizializzazione di BadT")
         self.og_model = copy.deepcopy(model)  # Copio il modello originale

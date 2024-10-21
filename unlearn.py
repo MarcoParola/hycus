@@ -18,6 +18,7 @@ from src.dataset_wrapper import DatasetWrapper
 from src.dataset_wrapper_icus import DatasetWrapperIcus
 from src.models.resnet import ResNet, ResidualBlock
 from src.unlearning_methods.icus import Icus
+from src.metrics.metrics import get_membership_attack_prob
 
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
@@ -36,7 +37,7 @@ def main(cfg):
     # Load dataset
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     train, val, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
-    # TODO fai il wrap con la classe custom: ImgTextDataset
+    
     test_loader = torch.utils.data.DataLoader(test, 
         batch_size=cfg.train.batch_size, 
         shuffle=False, 
@@ -53,29 +54,30 @@ def main(cfg):
         num_workers=cfg.train.num_workers)
 
     # Load model
-    print("Carico il modello")
+    print("Model loading")
     #model = load_model(cfg.model, cfg.dataset.name)
     model=ResNet(ResidualBlock)
     model.load_state_dict(torch.load(os.path.join(cfg.currentDir, "checkpoints", cfg.dataset.name + '_' + cfg.model + '.pth'), map_location=cfg.device))
     model.to(cfg.device)
 
-    print("Calcolo le metriche")
-    # compute classification metrics
+    print("Compute classification metrics")
     num_classes = cfg[cfg.dataset.name].n_classes
     forgetting_subset = get_forgetting_subset(cfg.forgetting_set, cfg[cfg.dataset.name].n_classes, cfg.forgetting_set_size)
     metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
-    print("Wrapper datasets")
+    print("Wrapping datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
     forget_indices_val = [i for i in range(len(val)) if val[i][1] in forgetting_subset]
-    #print("Indici da scordare:", forget_indices)
     retain_indices = [i for i in range(len(train)) if i not in forget_indices]
+    
     # unlearning process
     unlearning_method = cfg.unlearning_method
     wrapped_val = DatasetWrapper(val, forget_indices_val)
     wrapped_val_loader = DataLoader(wrapped_val, batch_size=cfg.train.batch_size, shuffle=True, num_workers=8)
+    retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size, num_workers=8) 
+    forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size, num_workers=8)
     if unlearning_method == 'icus':
         infgt = np.zeros(num_classes)
         for i in forgetting_subset:
@@ -83,13 +85,11 @@ def main(cfg):
         cuda = True if cfg.device == 'cuda' else False
         wrapped_train = DatasetWrapperIcus(infgt, model, cuda, orig_dataset=cfg.dataset.name)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=0) #SHUFFLE ?????
-        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 perchè CIFAR10 probabilmente serve una logica per trovare il valore    
+        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 because we're using CIFAR10, we probably need a logic to get the number of features    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
-        retain_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size,sampler=SubsetRandomSampler(retain_indices), num_workers=8) 
-        forget_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(forget_indices), num_workers=8)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=8)
-        unlearning = get_unlearning_method(unlearning_method, model, retain_loader, forget_loader, test_loader, train_loader, wrapped_val_loader, cfg, forgetting_subset, loggers)
+        unlearning = get_unlearning_method(unlearning_method, model, test_loader, train_loader, wrapped_val_loader, cfg, forgetting_subset, loggers)
     if unlearning_method == 'scrub':
         unlearning.unlearn(wrapped_train_loader)
     elif unlearning_method == 'badT':
@@ -102,13 +102,24 @@ def main(cfg):
         raise ValueError(f"Unlearning method '{unlearning_method}' not recognised.")
     # recompute metrics
     if unlearning_method == 'icus':
-        accuracy_retain, accuracy_forget=unlearning.test_unlearning_effect(test_loader, forgetting_subset, epoch=cfg.max_epochs)
-        loggers.log_metrics({'accuracy_retain': accuracy_retain, 'accuracy_forget': accuracy_forget})
+        unlearning.test_unlearning_effect(wrapped_train_loader, test_loader, forgetting_subset, epoch=cfg.max_epochs, test=True)
+        compute_mia(retain_loader, forget_loader, test_loader, unlearning.model, num_classes, forgetting_subset)
     else:
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
 
+
+def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset):
+    attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
+    metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)
+    accuracy_test = metrics_test['accuracy']
+    metrics = {
+        "accuracy_test": accuracy_test,
+        "membership_inference_attack_result": attack_result
+    }
+    print("Model metrics post-unlearning on test set and membership inference attack:")
+    print(metrics)
 
 
 if __name__ == '__main__':

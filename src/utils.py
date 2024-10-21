@@ -12,10 +12,6 @@ import numpy as np
 import omegaconf
 
 def get_save_model_callback(save_path):
-    """Returns a ModelCheckpoint callback
-    
-    save_path: str: save path
-    """
     save_model_callback = ModelCheckpoint(
         monitor='val_loss',
         mode='min',
@@ -27,10 +23,6 @@ def get_save_model_callback(save_path):
     return save_model_callback
 
 def get_early_stopping(patience=10):
-    """Returns an EarlyStopping callback
-
-    patience: int: patience
-    """
     early_stopping_callback = EarlyStopping(
         monitor='val_loss',
         mode='min',
@@ -40,12 +32,6 @@ def get_early_stopping(patience=10):
 
 # forgetting_set could be a list or a string
 def get_forgetting_subset(forgetting_set, n_classes, forgetting_set_size):
-    """Returns a forgetting subset
-
-    forgetting_set: str or list: forgetting set
-    n_classes: int: number of classes
-    forgetting_set_size: int: forgetting set size
-    """
     
     if forgetting_set == 'random':
         print('Random forgetting set')
@@ -81,7 +67,7 @@ def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_s
 
 
 
-################## ROBA PER SSD COPIATA DA CORRECTIVE MU####################
+################## STUFF FOR SSD TAKEN FROM CORRECTIVE MACHINE UNLEARNING PAPER ####################
 class ParameterPerturber:
     def __init__(
         self,

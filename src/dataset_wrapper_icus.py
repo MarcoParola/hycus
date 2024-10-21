@@ -80,17 +80,11 @@ class DatasetWrapperIcus(Dataset):
         token_ids = encoding['input_ids']
         attention_mask = encoding['attention_mask']
 
-        # Display token IDs and attention mask
-        print(f"Token IDs: {token_ids}")
-        print(f"Attention Mask: {attention_mask}")
-
         # Get word embeddings for all the words at once
         with torch.no_grad():
             outputs = model(input_ids=token_ids, attention_mask=attention_mask)
             word_embeddings = outputs.last_hidden_state  # Retrieve the last hidden states
 
-        # Display the shape of the word embeddings
-        print(f"Word Embeddings Shape: {word_embeddings.shape}")
         return word_embeddings
         
 def load_words_to_array(file_path):

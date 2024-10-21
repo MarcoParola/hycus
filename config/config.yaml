@@ -7,7 +7,7 @@ currentDir: ${hydra:runtime.cwd}
 seed: -1
 
 model: resnet
-unlearning_method: ssd
+unlearning_method: icus
 forgetting_set_strategy: random_values
 forgetting_set: random
 forgetting_set_size: 4
