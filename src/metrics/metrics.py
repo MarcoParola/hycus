@@ -57,6 +57,16 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset, test = T
     metrics = {**classification_metrics}
     return metrics
 
+def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset):
+    attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
+    metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)
+    accuracy_test = metrics_test['accuracy']
+    metrics = {
+        "accuracy_test": accuracy_test,
+        "membership_inference_attack_result": attack_result
+    }
+    print("Model metrics post-unlearning on test set and membership inference attack:")
+    print(metrics)
 
 ##### CODE FROM https://github.com/ayushkumartarun/zero-shot-unlearning/blob/main/metrics.py ###### 
 def entropy(p, dim = -1, keepdim = False):

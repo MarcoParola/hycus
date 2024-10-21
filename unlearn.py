@@ -18,7 +18,7 @@ from src.dataset_wrapper import DatasetWrapper
 from src.dataset_wrapper_icus import DatasetWrapperIcus
 from src.models.resnet import ResNet, ResidualBlock
 from src.unlearning_methods.icus import Icus
-from src.metrics.metrics import get_membership_attack_prob
+from src.metrics.metrics import get_membership_attack_prob, compute_mia
 
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
@@ -110,16 +110,6 @@ def main(cfg):
         print("Accuracy retain ", metrics['accuracy_retaining'])
 
 
-def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset):
-    attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
-    metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)
-    accuracy_test = metrics_test['accuracy']
-    metrics = {
-        "accuracy_test": accuracy_test,
-        "membership_inference_attack_result": attack_result
-    }
-    print("Model metrics post-unlearning on test set and membership inference attack:")
-    print(metrics)
 
 
 if __name__ == '__main__':
