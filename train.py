@@ -31,6 +31,9 @@ def main(cfg):
     val_loader = DataLoader(val, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
+
+    # TODO use load_model function defined in src/models/model.py
+    # remember to fix that function
     model = ResNet(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
     model.to(cfg.device)
 

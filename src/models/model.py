@@ -6,7 +6,7 @@ import timm
 
 
 # goodbye and thank you for all the fish: https://huggingface.co/anonauthors 
-def load_model(model_name, dataset):
+def load_model(model_name, dataset): # TODO add checkpoints as optional parameter (..., checkpoint=None), and add device as optional parameter (..., device='cpu')
     """Load a model from the Hugging Face model hub
     model_name: str: model name
     dataset: str: dataset name
