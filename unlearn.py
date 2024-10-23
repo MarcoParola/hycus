@@ -88,10 +88,12 @@ def main(cfg):
         unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 because we're using CIFAR10, we probably need a logic to get the number of features    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
-        wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=8)
+        wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size*2, shuffle=True, num_workers=8)
+        forget_loader_with_infgt = DataLoader(wrapped_train, batch_size=cfg.train.batch_size//4, sampler=SubsetRandomSampler(forget_indices))
+        retain_loader_with_infgt = DataLoader(wrapped_train, batch_size=cfg.train.batch_size, sampler=SubsetRandomSampler(retain_indices))
         unlearning = get_unlearning_method(unlearning_method, model, test_loader, train_loader, wrapped_val_loader, cfg, forgetting_subset, loggers)
     if unlearning_method == 'scrub':
-        unlearning.unlearn(wrapped_train_loader)
+        new_model = unlearning.unlearn(wrapped_train_loader, forget_loader_with_infgt)
     elif unlearning_method == 'badT':
         unlearning.unlearn(wrapped_train_loader, test_loader, wrapped_val_loader)
     elif unlearning_method == 'ssd':
@@ -103,12 +105,11 @@ def main(cfg):
     # recompute metrics
     if unlearning_method == 'icus':
         unlearning.test_unlearning_effect(wrapped_train_loader, test_loader, forgetting_subset, epoch=cfg.max_epochs, test=True)
-        compute_mia(retain_loader, forget_loader, test_loader, unlearning.model, num_classes, forgetting_subset)
     else:
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
-
+    compute_mia(retain_loader, forget_loader, test_loader, new_model, num_classes, forgetting_subset, loggers)
 
 
 

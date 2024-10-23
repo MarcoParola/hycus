@@ -37,8 +37,8 @@ class Icus(BaseUnlearningMethod):
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Autoencoder optimizers
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=1e-3)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=1e-3)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-3)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-3)
         
         
 

@@ -29,7 +29,6 @@ class BaseUnlearningMethod(ABC):
     def unlearn(self, train_loader, test_loader, val_loader=None):
         self.epoch = 0
         while self.epoch < self.opt.max_epochs: #finchè non ho finito di trainare
-            #self.curr_step = 0
             time_start = time.process_time() #salvo il tempo di inizio
             self.train_one_epoch(loader=train_loader) #traino per un'epoca
             self.epoch += 1
@@ -69,8 +68,6 @@ class BaseUnlearningMethod(ABC):
         self.model.to(self.opt.device)
 
     def train_one_epoch(self, loader):
-        """Esegue un'epoca di training su un loader."""
-        self.epoch += 1
         print("Inizio epoca di training")
         self.model.train()  # Imposta il modello in modalità training
 
@@ -91,8 +88,6 @@ class BaseUnlearningMethod(ABC):
                 self.curr_step += 1
                 if self.curr_step > self.opt.train_iters:
                     break
-                
-        print(f'Epoca: {self.epoch}')
         return
 
 
@@ -170,7 +165,7 @@ class BaseUnlearningMethod(ABC):
                 outputs = self.model(inputs)
                 for i, o, t in zip(infgt, outputs, targets):
                     pred = torch.argmax(o)
-                    print(f"Predizione: {pred}, Target: {t}", "Forget" if i == 1 else "Retain")
+                    #print(f"Predizione: {pred}, Target: {t}", "Forget" if i == 1 else "Retain")
                     if i == 1:
                         if pred==t:
                             correct_forget+=1

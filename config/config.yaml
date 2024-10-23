@@ -30,7 +30,7 @@ train:
   num_workers: 1
   patience: 10
 
-train_iters: 250
+train_iters: 1132
 max_epochs: 10
 
 log:

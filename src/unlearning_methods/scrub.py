@@ -10,34 +10,34 @@ from src.unlearning_methods.base import BaseUnlearningMethod
 
 class Scrub(BaseUnlearningMethod):
 
-    def __init__(self, opt, model, test_loader, val_loader, logger, maximize=False, alpha=0.1, kd_T=4.0):
+    def __init__(self, opt, model, test_loader, val_loader, logger, alpha=0.1, kd_T=4.0):
         super().__init__(opt, model)
         print("Inizializzazione di Scrub")
         self.og_model = copy.deepcopy(model)  # original model copy
         self.criterion = nn.CrossEntropyLoss()
         self.logger = logger
-        self.epoch = 0
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.maximize = maximize
         self.alpha = alpha
         self.kd_T = kd_T
-        self.msteps = opt.train_iters // 2  
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005, weight_decay=0.1)
+        self.msteps = 2000 #opt.train_iters // 10  
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
-    def unlearn(self, train_loader):
+    def unlearn(self, train_loader, forget_loader):
         print("Start unlearning process")
-        self.maximize=False
+
         while self.curr_step < self.opt.train_iters:
             if self.curr_step < self.msteps:
                 self.maximize = True
-                self._train_one_phase(loader=self.forget_loader, train_loader=train_loader)
-            else:
-                self.maximize = False
-                self._train_one_phase(loader=train_loader, train_loader=train_loader)
+                self._train_one_phase(loader=forget_loader, train_loader=train_loader)
+            
+            self.maximize = False
+            self._train_one_phase(loader=train_loader, train_loader=train_loader)
             if self.val_loader is not None:
                 self.validate(self.val_loader)
+        return self.model
             
 
     def distill_kl_loss(self, student_output, teacher_output, temperature):
