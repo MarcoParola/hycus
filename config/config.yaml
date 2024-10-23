@@ -23,10 +23,10 @@ SSDdampening: 0.5
 SSDselectwt: 0.1
 
 train:
-  batch_size: 64
-  max_epochs: 20
-  lr: 1e-3
-  save_path: ./models
+  batch_size: 32
+  max_epochs: 140
+  lr: 3e-5
+  save_path: checkpoints/
   num_workers: 1
   patience: 10
 
