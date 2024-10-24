@@ -11,13 +11,12 @@ from src.datasets.dataset import load_dataset
 from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
-from src.unlearning.factory import get_unlearning_method
-from omegaconf import OmegaConf
+from src.unlearning_methods import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.dataset_wrapper import DatasetWrapper
 from src.dataset_wrapper_icus import DatasetWrapperIcus
-from src.models.resnet import ResNet, ResidualBlock
-from src.unlearning_methods.icus import Icus
+from src.models.resnet import ResNet, ResidualBlock # TODO remove this import
+from src.unlearning_methods import Icus
 from src.metrics.metrics import get_membership_attack_prob, compute_mia
 
 
@@ -55,9 +54,10 @@ def main(cfg):
 
     # Load model
     print("Model loading")
-    #model = load_model(cfg.model, cfg.dataset.name)
+    # TODO use load_model function defined in src/models/model.py
+    # remember to fix that function
     model=ResNet(ResidualBlock)
-    model.load_state_dict(torch.load(os.path.join(cfg.currentDir, "checkpoints", cfg.dataset.name + '_' + cfg.model + '.pth'), map_location=cfg.device))
+    model.load_state_dict(torch.load(os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth'), map_location=cfg.device))
     model.to(cfg.device)
 
     print("Compute classification metrics")
@@ -79,11 +79,9 @@ def main(cfg):
     retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size, num_workers=8) 
     forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size, num_workers=8)
     if unlearning_method == 'icus':
-        infgt = np.zeros(num_classes)
-        for i in forgetting_subset:
-            infgt[i] = 1
-        cuda = True if cfg.device == 'cuda' else False
-        wrapped_train = DatasetWrapperIcus(infgt, model, cuda, orig_dataset=cfg.dataset.name)
+        infgt = torch.zeros(num_classes)
+        infgt[forgetting_subset] = 1
+        wrapped_train = DatasetWrapperIcus(infgt, model, num_classes=num_classes, dataset_name=cfg.dataset.name, device=cfg.device)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=0) #SHUFFLE ?????
         unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 because we're using CIFAR10, we probably need a logic to get the number of features    
     else:

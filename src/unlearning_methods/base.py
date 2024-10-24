@@ -9,6 +9,10 @@ import tqdm
 import time
 from src.utils import LinearLR
 
+from src.unlearning_methods.scrub import Scrub
+from src.unlearning_methods.badT import BadT
+from src.unlearning_methods.ssd import SSD
+
 class BaseUnlearningMethod(ABC):
     def __init__(self, opt, model, forgetting_set=None, prenet=None):
         self.opt = opt
@@ -186,3 +190,14 @@ class BaseUnlearningMethod(ABC):
         })
         
         self.model.train()  # Torna in modalità training per il prossimo ciclo
+
+def get_unlearning_method(method_name, model, test_loader, train_loader,wrapped_val_loader, cfg, forgetting_set, logger=None):
+    if method_name == 'scrub':
+        return Scrub(cfg, model, test_loader, wrapped_val_loader, logger)
+    elif method_name == 'badT':
+        return BadT(cfg, model, forgetting_set, logger)
+    elif method_name == 'ssd':
+        return SSD(cfg, model, logger)
+    else:
+        raise ValueError(f"Unlearning method '{method_name}' not recognised.")
+    return None
