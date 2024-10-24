@@ -11,12 +11,12 @@ from src.datasets.dataset import load_dataset
 from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
-from src.unlearning_methods import get_unlearning_method
+from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.dataset_wrapper import DatasetWrapper
 from src.dataset_wrapper_icus import DatasetWrapperIcus
 from src.models.resnet import ResNet, ResidualBlock # TODO remove this import
-from src.unlearning_methods import Icus
+from src.unlearning_methods.icus import Icus
 from src.metrics.metrics import get_membership_attack_prob, compute_mia
 
 
@@ -107,7 +107,7 @@ def main(cfg):
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
-    compute_mia(retain_loader, forget_loader, test_loader, new_model, num_classes, forgetting_subset, loggers)
+    compute_mia(retain_loader, forget_loader, test_loader, new_model, num_classes, forgetting_subset, loggers, cfg.train_iters)
 
 
 

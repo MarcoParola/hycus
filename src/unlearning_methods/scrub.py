@@ -21,7 +21,10 @@ class Scrub(BaseUnlearningMethod):
         self.alpha = alpha
         self.kd_T = kd_T
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005, weight_decay=0.1)
-        self.msteps = 2000 #opt.train_iters // 10  
+        self.msteps = 20000 # Misleading value, to be changed. Probably the logic in changing curr_step should be changed. I think
+                            # it should be updated after each epoch, not after each step, otherwise there's the risk of stopping
+                            # in the middle of an epoch where loss is too high.
+                            # I set msteps to a so high value to make it ininfluent. TO REVIEW
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
@@ -67,7 +70,3 @@ class Scrub(BaseUnlearningMethod):
         return output, loss
 
 
-"""
-Re-run con 3,4,5 epoche complete
-Cambia il forgetting set (1,2,3) classi
-"""
