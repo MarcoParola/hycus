@@ -76,6 +76,32 @@ def main(cfg):
 
             wandb_logger.log_metrics({"val_loss": val_loss, "val_acc": val_acc})
 
+    # test
+    model.eval()
+    with torch.no_grad():
+        test_loss = 0
+        correct = 0
+        total = 0
+        for i, (x, y) in enumerate(tqdm(test_loader)):
+            x = x.to(cfg.device)
+            y = y.to(cfg.device)
+            y_pred = model(x)
+            loss = criterion(y_pred, y)
+            test_loss += loss.item()
+            _, predicted = y_pred.max(1)
+            total += y.size(0)
+            correct += predicted.eq(y).sum().item()
+
+        test_loss /= len(test_loader)
+        test_acc = 100 * correct / total
+
+        wandb_logger.log_metrics({"test_loss": test_loss, "test_acc": test_acc})
+
+    #create folder if not exist and save torch model
+    os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
+    torch.save(model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth'))
+
+
             
 
 if __name__ == '__main__':

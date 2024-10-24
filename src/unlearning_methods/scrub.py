@@ -67,4 +67,7 @@ class Scrub(BaseUnlearningMethod):
         return output, loss
 
 
-    
+"""
+Re-run con 3,4,5 epoche complete
+Cambia il forgetting set (1,2,3) classi
+"""
