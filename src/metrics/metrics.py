@@ -1,7 +1,10 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
+import random
 from sklearn.svm import SVC
+from torch.utils.data.sampler import SubsetRandomSampler
+from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 
 
@@ -57,17 +60,11 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset, test = T
     metrics = {**classification_metrics}
     return metrics
 
-def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset, loggers, current_step):
-    attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
-    metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)
-    accuracy_test = metrics_test['accuracy']
-    metrics = {
-        "accuracy_test": accuracy_test,
-        "membership_inference_attack_result": attack_result
-    }
-    print("Model metrics post-unlearning on test set and membership inference attack:")
-    loggers.log_metrics({"Membership Inference Attack": metrics["membership_inference_attack_result"]}, step=0)
-    print(metrics)
+
+def prepare_membership_inference_attack(test_loader,forgetting_subset, batch_size):
+    forget_indices_test = [i for i in range(len(test_loader)) if test_loader[i][1] in forgetting_subset]
+    forget_indices_test_loader = DataLoader(test_loader, batch_size=batch_size, sampler=SubsetRandomSampler(forget_indices_test))
+    return forget_indices_test_loader
 
 ##### CODE FROM https://github.com/ayushkumartarun/zero-shot-unlearning/blob/main/metrics.py ###### 
 def entropy(p, dim = -1, keepdim = False):
@@ -83,6 +80,63 @@ def collect_prob(data_loader, model):
             output = model(data)
             prob.append(F.softmax(output, dim=-1).data)
     return torch.cat(prob)
+
+
+def compute_mia(test_forget_loader, train_forget_loader, model, num_classes, loggers):
+    attack_result = get_membership_attack_prob(test_forget_loader, train_forget_loader, model)
+    loggers.log_metrics({"Membership Inference Attack": attack_result}, step=0)
+    print("Membership Inference Attack: ", attack_result)
+
+
+
+def get_membership_attack_prob(test_loader, train_loader, model):
+    X_ts, Y_ts, X_tr, Y_tr = get_membership_attack_data(test_loader, train_loader, model)
+    clf = SVC(C=3,gamma='auto',kernel='rbf')
+    clf.fit(X_tr, Y_tr)
+
+    size_test=len(X_ts)
+    size_train=len(X_tr)
+    prob_test = size_test / (size_test + size_train)
+    results = []
+    for i in range(size_test):
+        b = np.random.rand() 
+        if b < prob_test:
+            j = random.randint(0, size_test-1)
+            sample = X_ts[j]
+        else:
+            j = random.randint(0, size_train-1)
+            sample = X_tr[j]
+        pred = clf.predict([sample])
+        results.append(pred[0])
+    return np.mean(results)
+
+
+def get_membership_attack_data(test_loader, train_loader, model):
+    test_prob = collect_prob(test_loader, model)
+    train_prob = collect_prob(train_loader, model)
+    X_ts = entropy(test_prob).cpu().numpy().reshape(-1, 1)
+    X_tr = entropy(train_prob).cpu().numpy().reshape(-1, 1)
+    Y_ts = np.concatenate([np.zeros(len(test_prob))])
+    Y_tr = np.concatenate([np.ones(len(train_prob))])
+    return X_ts, Y_ts, X_tr, Y_tr
+
+
+
+
+#Following functions currently not used
+"""
+def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset, loggers, current_step):
+    attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
+    metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)
+    accuracy_test = metrics_test['accuracy']
+    metrics = {
+        "accuracy_test": accuracy_test,
+        "membership_inference_attack_result": attack_result
+    }
+    print("Model metrics post-unlearning on test set and membership inference attack:")
+    loggers.log_metrics({"Membership Inference Attack": metrics["membership_inference_attack_result"]}, step=0)
+    print(metrics)
+
 
 def get_membership_attack_data(retain_loader, forget_loader, test_loader, model):    
     retain_prob = collect_prob(retain_loader, model)
@@ -185,4 +239,4 @@ def ain(full_model, model, gold_model, train_data, val_retain, val_forget,
     print("Relearning time for Forget Model is {}".format(rltime_forget))
     
     rl_coeff = rltime_forget/rltime_gold
-    print("AIN = {}".format(rl_coeff))
+    print("AIN = {}".format(rl_coeff))"""
