@@ -17,7 +17,7 @@ from src.dataset_wrapper import DatasetWrapper
 from src.dataset_wrapper_icus import DatasetWrapperIcus
 from src.models.resnet import ResNet, ResidualBlock # TODO remove this import
 from src.unlearning_methods import Icus
-from src.metrics.metrics import get_membership_attack_prob, compute_mia
+from src.metrics.metrics import get_membership_attack_prob, compute_mia, prepare_membership_inference_attack
 
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
@@ -54,11 +54,9 @@ def main(cfg):
 
     # Load model
     print("Model loading")
-    # TODO use load_model function defined in src/models/model.py
+    # use load_model function defined in src/models/model.py
     # remember to fix that function
-    model=ResNet(ResidualBlock)
-    model.load_state_dict(torch.load(os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth'), map_location=cfg.device))
-    model.to(cfg.device)
+    model = load_model(cfg.model, os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth') , cfg.device)
 
     print("Compute classification metrics")
     num_classes = cfg[cfg.dataset.name].n_classes
@@ -83,7 +81,7 @@ def main(cfg):
         infgt[forgetting_subset] = 1
         wrapped_train = DatasetWrapperIcus(infgt, model, num_classes=num_classes, dataset_name=cfg.dataset.name, device=cfg.device)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=10, num_workers=0) #SHUFFLE ?????
-        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 because we're using CIFAR10, we probably need a logic to get the number of features    
+        unlearning = Icus(cfg, model, 128, num_classes, wrapped_train_loader, forgetting_subset, wrapped_val_loader, loggers) #128 because we're using ResNet, we probably need a logic to get the number of features    
     else:
         wrapped_train = DatasetWrapper(train, forget_indices)
         wrapped_train_loader = DataLoader(wrapped_train, batch_size=cfg.train.batch_size*2, shuffle=True, num_workers=8)
@@ -107,7 +105,9 @@ def main(cfg):
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
-    compute_mia(retain_loader, forget_loader, test_loader, new_model, num_classes, forgetting_subset, loggers)
+    test_forget_loader= prepare_membership_inference_attack(test_loader, forgetting_subset, cfg.train.batch_size) 
+    compute_mia(test_forget_loader, forget_loader, new_model, num_classes, loggers)
+    #compute_mia(retain_loader, forget_loader, test_loader, new_model, num_classes, forgetting_subset, loggers)
 
 
 
