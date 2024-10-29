@@ -105,7 +105,7 @@ def main(cfg):
         metrics = compute_metrics(unlearning.model, test_loader, num_classes, forgetting_subset)
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
-    test_forget_loader= prepare_membership_inference_attack(test_loader, forgetting_subset, cfg.train.batch_size) 
+    test_forget_loader= prepare_membership_inference_attack(test, forgetting_subset, cfg.train.batch_size) 
     compute_mia(test_forget_loader, forget_loader, new_model, num_classes, loggers)
     #compute_mia(retain_loader, forget_loader, test_loader, new_model, num_classes, forgetting_subset, loggers)
 

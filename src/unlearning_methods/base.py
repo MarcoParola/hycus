@@ -128,7 +128,7 @@ class BaseUnlearningMethod(ABC):
         if not save_preds:
             print(f'Epoca: {self.epoch} Val Top1: {top1*100:.2f}%')
 
-       if save_model:
+        if save_model:
             if top1 > self.best_top1:  # If the best found until now
                 self.best_top1 = top1  
                 self.best_model = copy.deepcopy(self.model).cpu()  

@@ -18,7 +18,7 @@ def load_model(model_name, checkpoint=None, device='cpu'):
         model=ResNet(ResidualBlock)
     else:
         raise ValueError(f'Unknown model: {model_name}')
-    model.load_state_dict(torch.load(checkpoint), map_location=device)
+    model.load_state_dict(torch.load(checkpoint, map_location=device))
     model.to(device)
     return model
 

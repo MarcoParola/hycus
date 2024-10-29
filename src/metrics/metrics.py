@@ -61,9 +61,9 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset, test = T
     return metrics
 
 
-def prepare_membership_inference_attack(test_loader,forgetting_subset, batch_size):
-    forget_indices_test = [i for i in range(len(test_loader)) if test_loader[i][1] in forgetting_subset]
-    forget_indices_test_loader = DataLoader(test_loader, batch_size=batch_size, sampler=SubsetRandomSampler(forget_indices_test))
+def prepare_membership_inference_attack(test, forgetting_subset, batch_size):
+    forget_indices_test = [i for i in range(len(test)) if test[i][1] in forgetting_subset]
+    forget_indices_test_loader = DataLoader(test, batch_size=batch_size, sampler=SubsetRandomSampler(forget_indices_test))
     return forget_indices_test_loader
 
 ##### CODE FROM https://github.com/ayushkumartarun/zero-shot-unlearning/blob/main/metrics.py ###### 
@@ -112,12 +112,12 @@ def get_membership_attack_prob(test_loader, train_loader, model):
 
 
 def get_membership_attack_data(test_loader, train_loader, model):
-    test_prob = collect_prob(test_loader, model)
-    train_prob = collect_prob(train_loader, model)
-    X_ts = entropy(test_prob).cpu().numpy().reshape(-1, 1)
-    X_tr = entropy(train_prob).cpu().numpy().reshape(-1, 1)
-    Y_ts = np.concatenate([np.zeros(len(test_prob))])
-    Y_tr = np.concatenate([np.ones(len(train_prob))])
+    X_ts = collect_prob(test_loader, model)
+    X_tr = collect_prob(train_loader, model)
+    #X_ts = entropy(X_ts).cpu().numpy().reshape(-1, 1) # TODO secondo me non serve fare l'entropy, vediamo se funziona senza, nel caso scommentare
+    #X_tr = entropy(X_tr).cpu().numpy().reshape(-1, 1)
+    Y_ts = np.zeros(len(X_ts))
+    Y_tr = np.ones(len(X_tr))
     return X_ts, Y_ts, X_tr, Y_tr
 
 
