@@ -10,7 +10,7 @@ model: resnet
 unlearning_method: icus
 forgetting_set_strategy: random_values
 forgetting_set: random
-forgetting_set_size: 4
+forgetting_set_size: 1
 
 dataset: 
   name: cifar10
@@ -30,7 +30,7 @@ train:
   num_workers: 1
   patience: 10
 
-train_iters: 1132
+train_iters: 3378
 max_epochs: 10
 
 log:

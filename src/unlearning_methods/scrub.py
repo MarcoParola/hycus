@@ -6,6 +6,7 @@ import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
+from src.utils import LinearLR
 from src.unlearning_methods.base import BaseUnlearningMethod
 
 class Scrub(BaseUnlearningMethod):
@@ -20,8 +21,13 @@ class Scrub(BaseUnlearningMethod):
         self.test_loader = test_loader
         self.alpha = alpha
         self.kd_T = kd_T
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005, weight_decay=0.1)
-        self.msteps = 2000 #opt.train_iters // 10  
+        #self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005, weight_decay=0.1)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-6, momentum=0.9, weight_decay=0.9)
+        self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
+        self.msteps = 20000 # Misleading value, to be changed. Probably the logic in changing curr_step should be changed. I think
+                            # it should be updated after each epoch, not after each step, otherwise there's the risk of stopping
+                            # in the middle of an epoch where loss is too high.
+                            # I set msteps to a so high value to make it ininfluent. TO REVIEW
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
@@ -44,7 +50,9 @@ class Scrub(BaseUnlearningMethod):
         """Calculate the KL-divergence loss for knowledge distillation."""
         student_output = F.log_softmax(student_output / temperature, dim=1)
         teacher_output = F.softmax(teacher_output / temperature, dim=1)
-        return F.kl_div(student_output, teacher_output, reduction='batchmean') * (temperature ** 2)
+        loss = F.kl_div(student_output, teacher_output, reduction='sum')
+        loss = loss * (temperature ** 2) / student_output.shape[0]
+        return loss
 
     def _train_one_phase(self, loader, train_loader):
         time_start = time.process_time()
@@ -67,4 +75,3 @@ class Scrub(BaseUnlearningMethod):
         return output, loss
 
 
-    
