@@ -1,20 +1,39 @@
-from torch.utils.data import Dataset
 import torch
+from torch.utils.data import Dataset
 import random
-import numpy as np
 from src.utils import retrieve_weights
 from transformers import BertModel, BertTokenizer
 
-
-class DatasetWrapperIcus(Dataset):
-    def __init__(self, infgt, model, num_classes, orig_dataset, device="cpu"):
+class UnlearningDataset(Dataset):
+    def __init__(self, dataset, forget_indices):
         """
+        UnlearningDataset class.
         Args:
-            classi (Tensor): Tensor contenente le etichette delle classi.
-            pesi (Tensor): Tensor contenente i pesi associati a ciascuna classe.
-            descrizioni (Tensor): Tensor contenente le descrizioni (o embedding) delle classi.
-            infgt_flags (Tensor): Tensor contenente i flag infgt per ciascuna classe (0 o 1).
-            device (str): Dispositivo su cui eseguire il calcolo (default: "cpu").
+            dataset (Dataset): original image dataset.
+            forget_indices (list): index of the samples to forget.
+        """
+        self.dataset = dataset
+        self.forget_indices = set(forget_indices) 
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        input, label = self.dataset[index]
+        infgt = 1 if index in self.forget_indices else 0
+        return input, label, infgt
+
+
+class IcusUnlearningDataset(Dataset):
+    def __init__(self, orig_dataset, infgt, model, num_classes, device="cpu"):
+        """
+        IcusUnlearningDataset class.
+        Args:
+            orig_dataset (str): name of the original dataset.
+            infgt (Tensor): flag infgt (1 or 0).
+            model (nn.Module): model to use.
+            num_classes (int): number of classes.
+            device (str): device to use.
         """
         self.classes = torch.arange(0, num_classes)
         self.descr = self.calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
@@ -28,23 +47,15 @@ class DatasetWrapperIcus(Dataset):
 
     def __getitem__(self, idx):
         # Estrai la classe, i pesi, la descrizione e il flag infgt in base all'indice
-        classe = self.classes[idx]
-        weigths = self.weights[idx]
-        descr = self.descr[idx]
-        infgt = self.infgt[idx]
-
-        classe = classe.to(self.device)
-        weigths = weigths.to(self.device)
-        descr = descr.to(self.device)
-        infgt = infgt.to(self.device)
-
+        classe = self.classes[idx].to(self.device)
+        weigths = self.weights[idx].to(self.device)
+        descr = self.descr[idx].to(self.device)
+        infgt = self.infgt[idx].to(self.device)
         return classe, weigths, descr, infgt
 
 
     def calculate_embeddings(self, dataset_name):
-
-        # Load BERT tokenizer and model
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased') # Load BERT tokenizer and model
         model = BertModel.from_pretrained('bert-base-uncased')
 
         # List of words to encode
@@ -58,8 +69,7 @@ class DatasetWrapperIcus(Dataset):
             padding=True,
             truncation=True,
             return_tensors='pt',
-            add_special_tokens=True
-        )
+            add_special_tokens=True)
 
         # Get token IDs and attention mask
         token_ids = encoding['input_ids']
@@ -78,5 +88,16 @@ def load_words_to_array(file_path):
         # Rimuovi eventuali spazi bianchi e newline, e crea una lista di parole
         words = [line.strip() for line in f if line.strip()]
     return words    
-                
 
+def get_unlearning_dataset(unlearning_method, 
+
+
+    unlearning_train_forget = None
+    unlearning_train_retain = None
+    unlearning_val_forget = None
+    unlearning_val_retain = None
+
+    return 
+
+
+    

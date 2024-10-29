@@ -35,7 +35,7 @@ class BaseUnlearningMethod(ABC):
             self.epoch += 1
             self.validate(val_loader) # Validate the model
             self.save_files['train_time_taken'] += time.process_time() - time_start 
-        return
+        return self.model # TODO controllare che sia il modello giusto da restituire
 
     def _training_step(self, inputs, labels):
         """Single step of training."""

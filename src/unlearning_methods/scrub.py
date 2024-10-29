@@ -31,7 +31,7 @@ class Scrub(BaseUnlearningMethod):
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
-    def unlearn(self, train_loader, forget_loader):
+    def unlearn(self, unlearning_forget_train_loader, unlearning_retain_train_loader, val_loader, forgetting_subset):
         print("Start unlearning process")
 
         while self.curr_step < self.opt.train_iters:

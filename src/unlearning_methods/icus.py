@@ -6,11 +6,94 @@ import numpy as np
 import random
 import copy
 from torch.utils.data import DataLoader
-from src.architectures.autoencoder import Autoencoder
-from src.architectures.autoencoder import JointAutoencoder
 from src.unlearning_methods.base import BaseUnlearningMethod
 from src.utils import retrieve_weights
 from src.metrics.metrics import compute_metrics
+import hydra
+
+class Autoencoder(nn.Module):
+    def __init__(self, opt, input_dim, embed_dim, output_dim=None, num_layers=3, vae=False, bias=True):
+        super(Autoencoder, self).__init__()
+        self.opt = opt
+        self.input_dim = input_dim
+        self.output_dim = output_dim if output_dim is not None else input_dim   
+        self.embed_dim = [2 * embed_dim, embed_dim] if vae else [embed_dim, embed_dim]
+
+        if num_layers == 2:
+            self.encoder = nn.Sequential(
+                nn.Linear(self.input_dim, self.embed_dim[0]),
+                nn.ReLU(inplace=True) if not vae else nn.Identity(inplace=True)
+            )
+            self.decoder = nn.Sequential(
+                nn.Linear(self.embed_dim[1], self.output_dim)
+            )
+        elif num_layers == 3:
+            self.encoder = nn.Sequential(
+                nn.Linear(self.input_dim, self.embed_dim[0]),
+                nn.ReLU(inplace=True) if not vae else nn.Identity(inplace=True)
+            )
+            self.decoder = nn.Sequential(
+                nn.Linear(self.embed_dim[1], 1000),
+                nn.ReLU(inplace=True),
+                nn.Linear(1000, self.output_dim)
+            )
+        elif num_layers == 4:
+            self.encoder = nn.Sequential(
+                nn.Linear(self.input_dim, self.embed_dim[0]),
+                nn.ReLU(inplace=True),
+                nn.Linear(self.embed_dim[0], self.embed_dim[0]),
+                nn.ReLU(inplace=True) if not vae else nn.Identity(inplace=True)
+            )
+            self.decoder = nn.Sequential(
+                nn.Linear(self.embed_dim[1], 1000),
+                nn.ReLU(inplace=True),
+                nn.Linear(1000, self.output_dim)
+            )
+
+    def encode(self, x):
+        return self.encoder(x)  # Assumendo che x sia già sulla GPU
+
+    def decode(self, x):
+        return self.decoder(x)  # Assumendo che x sia già sulla GPU
+
+    def forward(self, x):
+        z = self.encode(x)
+        return self.decoder(z)
+    
+class JointAutoencoder(nn.Module):
+    def __init__(self, autoencoder_descr, autoencoder_weight, device):
+        super(JointAutoencoder, self).__init__()
+        self.ae_d = autoencoder_descr
+        self.ae_w = autoencoder_weight
+        self.device = device
+    
+    def encode_descr(self, x): 
+        return self.ae_d.encode(x)
+
+    def encode_weight(self, x):
+        return self.ae_w.encode(x)
+
+    def decode_descr(self, x):
+        return self.ae_d.decode(x)
+
+    def decode_weight(self, x):
+        return self.ae_w.decode(x)
+        
+    def forward(self, x):
+        descr_in, weight_in, _ = x  
+        descr_in = descr_in.to(self.device)  
+        weight_in = weight_in.to(self.device) 
+
+        latent_descr = self.encode_descr(descr_in)
+        latent_weight = self.encode_weight(weight_in)
+        
+        descr_from_descr = self.decode_descr(latent_descr)
+        descr_from_weight = self.decode_descr(latent_weight)
+        weight_from_weight = self.decode_weight(latent_weight)
+        weight_from_descr = self.decode_weight(latent_descr)
+        
+        return descr_from_descr, descr_from_weight, weight_from_weight, weight_from_descr, latent_descr, latent_weight
+
 
 class Icus(BaseUnlearningMethod):
     def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, val_loader, logger=None):
@@ -48,28 +131,35 @@ class Icus(BaseUnlearningMethod):
     def icus_distance(self, weights_encoded, descr_encoded):
         return nn.functional.cosine_similarity(weights_encoded, descr_encoded)
 
-    
-    def unlearn(self, model, train_loader):
+    def forward_pass(self, descr, weights, target):
+        descr = descr.view(descr.size(0), -1)
+        weights = weights.view(weights.size(0), -1)
+        att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
+        output = (att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight)
+        loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight)
+        return output, loss
+        
+
+    def unlearn(self, model, unlearning_train_loader, val_loader, forgetting_subset):
         self.model.fc.weight.requires_grad_(True)
         self.current_step = 0
         for epoch in range(self.opt.max_epochs):
             print("Epoch: ", epoch)
             self.train_one_epoch(train_loader, epoch) 
-            self.test_unlearning_effect(self.wrapped_train_loader, self.val_loader, self.forgetting_subset, epoch, False)
+            #self.test_unlearning_effect(self.wrapped_train_loader, self.val_loader, self.forgetting_subset, epoch, False)
         return self.model
 
-
-    def train_one_epoch(self, loader, epoch):
+    
+    def train_one_epoch(self, train_loader, val_loader, epoch):
         print("Train epoch start")
         self.joint_ae.train()  # Joint Autoencoder in training mode
         self.model.fc.train()  # Model in training mode
 
         running_loss = 0.0
 
-        for batch in loader:
+        for batch in train_loader:
             targets, weights, descr, infgt = batch
             weights, descr, infgt, targets = weights.to(self.device), descr.to(self.device), infgt.to(self.device), targets.to(self.device)
-
             descr = descr.view(descr.size(0), -1)  # Output: torch.Size([10, 2304])
 
             # Update the weights of the model
@@ -88,23 +178,49 @@ class Icus(BaseUnlearningMethod):
             descr.requires_grad_(True)
 
             # Forward pass
-            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
-
-            loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight)
+            output, loss = self.forward_pass(descr, weights, targets)
             self.logger.log_metrics({"loss": loss.item()}, step=self.current_step)
 
             # Backward pass
             self.descr_optimizer.zero_grad()
             self.weights_optimizer.zero_grad()
-
             loss.backward()  # Backpropagation
             self.descr_optimizer.step()  # Update autoencoder
             self.weights_optimizer.step() 
-
             running_loss += loss.item()
 
         print(f"Mean loss in this epoch: {running_loss / len(loader)}")
-        self.logger.log_metrics({"average_loss": running_loss / len(loader)}, step=epoch)
+        self.logger.log_metrics({"train/average_loss": running_loss / len(loader)}, step=epoch)
+
+        print("Val epoch start")
+        self.joint_ae.eval()  
+        self.model.fc.eval() 
+        running_loss = 0.0
+        for batch in val_loader:
+            targets, weights, descr, infgt = batch
+            weights, descr, infgt, targets = weights.to(self.device), descr.to(self.device), infgt.to(self.device), targets.to(self.device)
+            descr = descr.view(descr.size(0), -1)
+
+            # Update the weights of the model
+            for i in self.forgetting_subset:
+                if self.opt.forgetting_set_strategy == "random_values":
+                    weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                elif self.opt.forgetting_set_strategy == "random_class":
+                    j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
+                    weights[i] = weights[j]
+                elif self.opt.forgetting_set_strategy == "zeros":
+                    weights[i] = torch.zeros_like(weights[i], requires_grad=True)
+                else:
+                    raise ValueError("Invalid forgetting set strategy")
+
+            weights.requires_grad_(True)
+            descr.requires_grad_(True)
+
+            # Forward pass
+            output, loss = self.forward_pass(descr, weights, targets)
+            self.logger.log_metrics({"loss": loss.item()}, step=self.current_step)
+
+
         
 
 
@@ -134,3 +250,16 @@ class Icus(BaseUnlearningMethod):
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
         
+
+#@hydra.main(config_path="../../config", config_name="config")
+def main(cfg):
+    print("hello")
+    from src.models.resnet import ResNet, ResidualBlock
+
+    model = ResNet(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
+
+    icus = Icus(cfg, model, 128, 10, None, None, None)
+
+if __name__ == "__main__":
+    main()
+
