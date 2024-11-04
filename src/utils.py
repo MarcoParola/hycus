@@ -53,8 +53,15 @@ def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_s
     
     # Trova gli indici dei campioni da dimenticare
     forget_indices = []
+    
     for class_idx in forgetting_subset:
-        forget_indices = np.where(all_labels == class_idx)[0]
+        class_indices = np.where(all_labels == class_idx)[0]
+        forget_indices.extend(class_indices)  # Aggiunge gli indici alla lista
+
+    # Se vuoi evitare duplicati (nel caso ci siano sovrapposizioni), puoi convertire in un set:
+    forget_indices = list(set(forget_indices))
+
+    print(f"Numero di campioni da dimenticare: {len(forget_indices)}")
     
     # Trova gli indici dei campioni da mantenere
     retain_indices = list(set(all_indices) - set(forget_indices))

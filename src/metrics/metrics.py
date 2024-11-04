@@ -9,34 +9,25 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 
 
 
-def compute_predictions(model, loader, test):
+def compute_predictions(model, loader):
     model.eval()
     device = "cuda" if torch.cuda.is_available() else "cpu"
     y_true = list()
     y_pred = list()
     with torch.no_grad():
-        if test:
-            for x, y in loader:
-                x = x.to(device)
-                y = y.to(device)
-                logits = model(x)
-                _, preds = torch.max(logits, 1)
-                y_true.extend(y.cpu().numpy())
-                y_pred.extend(preds.cpu().numpy())
-        else:
-            for x, y, _ in loader:
-                x = x.to(device)
-                y = y.to(device)
-                logits = model(x)
-                _, preds = torch.max(logits, 1)
-                y_true.extend(y.cpu().numpy())
-                y_pred.extend(preds.cpu().numpy())
+        for x, y in loader:
+            x = x.to(device)
+            y = y.to(device)
+            logits = model(x)
+            _, preds = torch.max(logits, 1)
+            y_true.extend(y.cpu().numpy())
+            y_pred.extend(preds.cpu().numpy())
     return y_true, y_pred
 
 
-def compute_classification_metrics(model, test_loader, num_classes, forgetting_subset, test):
+def compute_classification_metrics(model, test_loader, num_classes, forgetting_subset):
     print("Starting metrics computation")
-    y_true, y_pred = compute_predictions(model, test_loader, test)
+    y_true, y_pred = compute_predictions(model, test_loader)
 
     # compute metrics three times (on whole dataset, on the forgetting subset, on the retaining subset)
     metrics = dict()
@@ -52,8 +43,8 @@ def compute_classification_metrics(model, test_loader, num_classes, forgetting_s
     metrics['accuracy_retaining'] = accuracy_score(y_true_retaining, y_pred_retaining)
     return metrics
 
-def compute_metrics(model, test_loader, num_classes, forgetting_subset, test = True):
-    classification_metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset, test)
+def compute_metrics(model, test_loader, num_classes, forgetting_subset):
+    classification_metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset)
     mia_metrics = None # TODO implement MIA metrics
     #metrics = {**classification_metrics, **mia_metrics}
     print("classification_metrics")
@@ -61,7 +52,7 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset, test = T
     return metrics
 
 
-def prepare_membership_inference_attack(test, forgetting_subset, batch_size):
+"""def prepare_membership_inference_attack(test, forgetting_subset, batch_size):
     forget_indices_test = [i for i in range(len(test)) if test[i][1] in forgetting_subset]
     forget_indices_test_loader = DataLoader(test, batch_size=batch_size, sampler=SubsetRandomSampler(forget_indices_test))
     return forget_indices_test_loader
@@ -124,7 +115,7 @@ def get_membership_attack_data(test_loader, train_loader, model):
 
 
 #Following functions currently not used
-"""
+
 def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset, loggers, current_step):
     attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
     metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)

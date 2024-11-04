@@ -6,13 +6,13 @@ from torch.cuda.amp import autocast, GradScaler
 from src.unlearning_methods.base import BaseUnlearningMethod
 
 class BadT(BaseUnlearningMethod):
-    def __init__(self, opt, model, forgetting_set, logger=None):
+    def __init__(self, opt, model, forgetting_subset, logger=None):
         super().__init__(opt, model)
         print("Inizializzazione di BadT")
         self.og_model = copy.deepcopy(model)  # Copio il modello originale
         self.og_model.to(self.opt.device)
         self.og_model.eval()  # Metto il modello originale in modalità di valutazione
-        self.forgetting_set = forgetting_set
+        self.forgetting_subset = forgetting_subset
         self.logger=logger
         
         # Creo il modello random con pesi casuali
@@ -24,7 +24,6 @@ class BadT(BaseUnlearningMethod):
         # Inizializzazione dell'ottimizzatore e scaler per mixed precision
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.opt.train.lr, momentum=0.9, weight_decay=0.001)
         self.scaler = GradScaler()
-        
         self.kltemp = 1  # Temperatura per la KL-divergenza (knowledge distillation)
 
     def _random_weights_init(self, m):
@@ -50,8 +49,7 @@ class BadT(BaseUnlearningMethod):
         
         # Calcolo la perdita con la KL-divergenza
         student_out = F.log_softmax(output / self.kltemp, dim=1)
-        loss = F.kl_div(student_out, overall_teacher_out, reduction='batchmean')
-        
+        loss = F.kl_div(student_out, overall_teacher_out)
         return output,loss
 
 
@@ -70,7 +68,6 @@ class BadT(BaseUnlearningMethod):
                     # Eseguiamo il forward pass e calcoliamo la perdita
                     preds, loss = self.forward_pass(inputs, labels, infgt)
                     self.logger.log_metrics({"method":"BadT", "loss": loss.item()}, step=self.epoch)
-                    #preds = torch.argmax(preds, dim=1)
                     self.scaler.scale(loss).backward()  #calcolo i gradienti e applico la backpropagation
                     self.scaler.step(self.optimizer) #aggiorno i pesi
                     self.scaler.update() #aggiorno lo scaler

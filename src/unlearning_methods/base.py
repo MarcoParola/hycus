@@ -35,7 +35,7 @@ class BaseUnlearningMethod(ABC):
             self.epoch += 1
             self.validate(val_loader) # Validate the model
             self.save_files['train_time_taken'] += time.process_time() - time_start 
-        return
+        return self.model
 
     def _training_step(self, inputs, labels):
         """Single step of training."""
@@ -70,13 +70,13 @@ class BaseUnlearningMethod(ABC):
         print("New training epoch")
         self.model.train()  
         # For each batch in the loader
-        for inputs, labels, infgt in tqdm.tqdm(loader):
-            inputs, labels, infgt = inputs.to(self.opt.device), labels.to(self.opt.device), infgt.to(self.opt.device)
+        for inputs, labels in tqdm.tqdm(loader):
+            inputs, labels = inputs.to(self.opt.device), labels.to(self.opt.device)
             with autocast(): 
                 # Zero the gradients
                 self.optimizer.zero_grad()
                 # Forward pass
-                preds, loss = self.forward_pass(inputs, labels, infgt)
+                preds, loss = self.forward_pass(inputs, labels)
                 self.logger.log_metrics({"method":self.opt.unlearning_method, "loss": loss.item()}, step=self.curr_step)
                 self.scaler.scale(loss).backward()  # Backward pass
                 self.scaler.step(self.optimizer) # Update the weights
@@ -152,12 +152,12 @@ class BaseUnlearningMethod(ABC):
 
         with torch.no_grad():  # Disable gradient calculation
 
-            for inputs, targets, infgt in val_loader:
-                inputs, targets, infgt = inputs.to(self.opt.device), targets.to(self.opt.device), infgt.to(self.opt.device)
+            for inputs, targets in val_loader:
+                inputs, targets = inputs.to(self.opt.device), targets.to(self.opt.device)
                 outputs = self.model(inputs)
-                for i, o, t in zip(infgt, outputs, targets):
+                for o, t in zip(outputs, targets):
                     pred = torch.argmax(o)
-                    if i == 1:
+                    if pred in self.forgetting_subset:
                         if pred==t:
                             correct_forget+=1
                         total_forget+=1
@@ -178,16 +178,19 @@ class BaseUnlearningMethod(ABC):
         
         self.model.train()  
         
-def get_unlearning_method(method_name, model, test_loader, train_loader,wrapped_val_loader, cfg, forgetting_set, logger=None):
+def get_unlearning_method(cfg, method_name, model, unlearning_train, forgetting_set, logger=None):
     from src.unlearning_methods.scrub import Scrub
     from src.unlearning_methods.badT import BadT
     from src.unlearning_methods.ssd import SSD
+    from src.unlearning_methods.icus import Icus
     if method_name == 'scrub':
-        return Scrub(cfg, model, test_loader, wrapped_val_loader, logger)
+        return Scrub(cfg, model, forgetting_set, logger)
     elif method_name == 'badT':
         return BadT(cfg, model, forgetting_set, logger)
     elif method_name == 'ssd':
         return SSD(cfg, model, logger)
+    elif method_name == 'icus':
+        return Icus(cfg, model, 128, cfg.dataset.classes, unlearning_train, forgetting_set, logger)
     else:
         raise ValueError(f"Unlearning method '{method_name}' not recognised.")
     return None
