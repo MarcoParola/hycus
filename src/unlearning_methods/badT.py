@@ -4,6 +4,9 @@ import torch.nn as nn
 import tqdm
 from torch.cuda.amp import autocast, GradScaler
 from src.unlearning_methods.base import BaseUnlearningMethod
+#ROBA DA TESTARE
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+
 
 class BadT(BaseUnlearningMethod):
     def __init__(self, opt, model, forgetting_subset, logger=None):
@@ -23,8 +26,9 @@ class BadT(BaseUnlearningMethod):
         
         # Inizializzazione dell'ottimizzatore e scaler per mixed precision
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.opt.train.lr, momentum=0.9, weight_decay=0.001)
+        self.scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3, verbose=False)
         self.scaler = GradScaler()
-        self.kltemp = 1  # Temperatura per la KL-divergenza (knowledge distillation)
+        self.kltemp = opt.temp  # Temperatura per la KL-divergenza (knowledge distillation)
 
     def _random_weights_init(self, m):
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
@@ -71,6 +75,6 @@ class BadT(BaseUnlearningMethod):
                     self.scaler.scale(loss).backward()  #calcolo i gradienti e applico la backpropagation
                     self.scaler.step(self.optimizer) #aggiorno i pesi
                     self.scaler.update() #aggiorno lo scaler
-                    self.scheduler.step() #aggiorno il learning rate
+                    self.scheduler.step(loss) #aggiorno il learning rate
             print(f'Epoca: {self.epoch}')
             return

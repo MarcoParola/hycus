@@ -25,13 +25,14 @@ SSDselectwt: 0.1
 train:
   batch_size: 32
   max_epochs: 140
-  lr: 1e-6
+  lr: 1e-3
   save_path: checkpoints/
   num_workers: 1
   patience: 10
 
-train_iters: 952
+train_iters: 999
 max_epochs: 10
+temp: 1
 
 log:
   path: ./logs

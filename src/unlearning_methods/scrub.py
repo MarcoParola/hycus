@@ -20,8 +20,9 @@ class Scrub(BaseUnlearningMethod):
         self.logger = logger
         self.alpha = alpha
         self.kd_T = kd_T
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-6, momentum=0.9, weight_decay=0.9)
-        self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0005, momentum=0.9, weight_decay=0.1)
+        #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
+        self.scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=999, gamma=0.1)
         self.msteps = 20000 # Misleading value, to be changed. Probably the logic in changing curr_step should be changed. I think
                             # it should be updated after each epoch, not after each step, otherwise there's the risk of stopping
                             # in the middle of an epoch where loss is too high.

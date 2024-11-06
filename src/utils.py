@@ -61,8 +61,6 @@ def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_s
     # Se vuoi evitare duplicati (nel caso ci siano sovrapposizioni), puoi convertire in un set:
     forget_indices = list(set(forget_indices))
 
-    print(f"Numero di campioni da dimenticare: {len(forget_indices)}")
-    
     # Trova gli indici dei campioni da mantenere
     retain_indices = list(set(all_indices) - set(forget_indices))
     

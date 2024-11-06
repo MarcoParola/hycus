@@ -11,6 +11,7 @@ from src.datasets.dataset import load_dataset
 from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
+from scripts.features_plotting import plot_features
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset
@@ -61,6 +62,9 @@ def main(cfg):
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
+    # Plot PCA
+    plot_features(model, test_loader)
+    
     #prepare datasets for unlearning
     print("Wrapping datasets")
     retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(train, forgetting_subset, cfg.forgetting_set_size)
@@ -70,7 +74,7 @@ def main(cfg):
     
     unlearning_method_name = cfg.unlearning_method
     unlearning_train = get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset)
-    retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size*5, num_workers=8) 
+    retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size*2, num_workers=8) 
     forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size//2, num_workers=8)
     
     # unlearning process
@@ -81,9 +85,11 @@ def main(cfg):
     elif unlearning_method_name == 'scrub':
         new_model = unlearning_method.unlearn(retain_loader, forget_loader, val_loader) 
     elif unlearning_method_name == 'badT':
-        new_model = unlearning_method.unlearn(unlearning_train, test_loader, val_loader) # TODO
+        new_model = unlearning_method.unlearn(unlearning_train, test_loader, val_loader) 
     elif unlearning_method_name == 'ssd':
         new_model = unlearning_method.unlearn() # TODO
+    
+    plot_features(new_model, train_loader)
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     print("Accuracy forget ", metrics['accuracy_forgetting'])

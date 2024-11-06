@@ -157,7 +157,7 @@ class BaseUnlearningMethod(ABC):
                 outputs = self.model(inputs)
                 for o, t in zip(outputs, targets):
                     pred = torch.argmax(o)
-                    if pred in self.forgetting_subset:
+                    if t in self.forgetting_subset:
                         if pred==t:
                             correct_forget+=1
                         total_forget+=1
