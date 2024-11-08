@@ -11,7 +11,7 @@ from src.datasets.dataset import load_dataset
 from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
-from scripts.features_plotting import plot_features
+from scripts.features_plotting import plot_features, plot_features_3d
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset
@@ -22,6 +22,7 @@ from src.unlearning_methods.icus import Icus
 @hydra.main(config_path='config', config_name='config', version_base=None)
 def main(cfg):
     # Set seed
+    torch.cuda.empty_cache() #TBR
     if cfg.seed == -1:
         random_data = os.urandom(4)
         print("Random classes: ", random_data)
@@ -63,7 +64,8 @@ def main(cfg):
         print(f'{k}: {v}')
 
     # Plot PCA
-    plot_features(model, test_loader)
+    #plot_features(model, test_loader, False)
+    plot_features_3d(model, test_loader, False)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -74,6 +76,7 @@ def main(cfg):
     
     unlearning_method_name = cfg.unlearning_method
     unlearning_train = get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset)
+    #MODIFY HERE TO MANAGE THE BATCH SIZE IF UNL_METHOD IS SCRUB
     retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size*2, num_workers=8) 
     forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size//2, num_workers=8)
     
@@ -89,9 +92,16 @@ def main(cfg):
     elif unlearning_method_name == 'ssd':
         new_model = unlearning_method.unlearn() # TODO
     
-    plot_features(new_model, train_loader)
+    #plot_features(new_model, train_loader, True) 
+    plot_features3d(new_model, train_loader, True)
+   
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
+    loggers.log_metrics({
+            "retain_test_accuracy": metrics[accuracy_retaining],
+            "forget_test_accuracy": metrics[accuracy_forgetting],
+            "step": 0
+        })
     print("Accuracy forget ", metrics['accuracy_forgetting'])
     print("Accuracy retain ", metrics['accuracy_retaining'])
     

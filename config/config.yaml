@@ -23,7 +23,7 @@ SSDdampening: 0.5
 SSDselectwt: 0.1
 
 train:
-  batch_size: 32
+  batch_size: 64
   max_epochs: 140
   lr: 1e-3
   save_path: checkpoints/
@@ -33,6 +33,7 @@ train:
 train_iters: 999
 max_epochs: 10
 temp: 1
+scrub_steps: 10
 
 log:
   path: ./logs

@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.manifold import TSNE
 from datetime import datetime
 
-def plot_features(model, data_loader): 
+def plot_features(model, data_loader, unlearned=False): 
     model.eval()  
 
     all_features = []
@@ -41,7 +41,7 @@ def plot_features(model, data_loader):
     plt.subplot(1, 2, 1)
     for classe in np.unique(labels_np):
         indices = np.where(labels_np == classe)
-        plt.scatter(X_pca[indices, 0], X_pca[indices, 1], label=f'Class {classe}', alpha=0.5, s=5)
+        plt.scatter(X_pca[indices, 0], X_pca[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
     plt.xlabel('PCA Component 1')
     plt.ylabel('PCA Component 2')
     plt.title('PCA of extracted features from the model')
@@ -52,7 +52,7 @@ def plot_features(model, data_loader):
     plt.subplot(1, 2, 2)
     for classe in np.unique(labels_np):
         indices = np.where(labels_np == classe)
-        plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class {classe}', alpha=0.5, s=5)
+        plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
     plt.xlabel('t-SNE Component 1')
     plt.ylabel('t-SNE Component 2')
     plt.title('t-SNE of extracted features from the model')
@@ -61,12 +61,14 @@ def plot_features(model, data_loader):
 
     # Save the plot with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig('fig/feature_plot_'+timestamp+'.png')
+    if unlearned:
+        plt.savefig('fig/feature_plot_unlearned_'+timestamp+'.png')
+    else:
+        plt.savefig('fig/feature_plot_'+timestamp+'.png')
     plt.show()
 
 
-"""
-def plot_features_3d(model, data_loader): 
+def plot_features_3d(model, data_loader, unlearned=False): 
     model.eval()  
 
     all_features = []
@@ -123,7 +125,10 @@ def plot_features_3d(model, data_loader):
 
     # Save the plot with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    plt.savefig('fig/feature_plot_3d_'+timestamp+'.png')
+    if unlearned:
+        plt.savefig('fig/feature_plot_3d_unlearned_'+timestamp+'.png')
+    else:
+        plt.savefig('fig/feature_plot_3d_'+timestamp+'.png')
     plt.show()
-"""
+
 

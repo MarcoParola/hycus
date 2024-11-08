@@ -22,11 +22,8 @@ class Scrub(BaseUnlearningMethod):
         self.kd_T = kd_T
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0005, momentum=0.9, weight_decay=0.1)
         #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
-        self.scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=999, gamma=0.1)
-        self.msteps = 20000 # Misleading value, to be changed. Probably the logic in changing curr_step should be changed. I think
-                            # it should be updated after each epoch, not after each step, otherwise there's the risk of stopping
-                            # in the middle of an epoch where loss is too high.
-                            # I set msteps to a so high value to make it ininfluent. TO REVIEW
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=3, gamma=0.1)
+        self.msteps = opt.scrub_steps//2 
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
@@ -34,9 +31,11 @@ class Scrub(BaseUnlearningMethod):
         print("Start unlearning process")
         if val_loader is not None:
             self.val_loader = val_loader
+        self.curr_step = 0
+        self.epoch = 0
 
-        while self.curr_step < self.opt.train_iters:
-            if self.curr_step < self.msteps:
+        while self.epoch < self.opt.scrub_steps:
+            if self.epoch < self.msteps:
                 self.maximize = True
                 self._train_one_phase(loader=forget_loader)
             
@@ -59,6 +58,8 @@ class Scrub(BaseUnlearningMethod):
         time_start = time.process_time()
         self.train_one_epoch(loader=loader)
         self.save_files['train_time_taken'] += time.process_time() - time_start
+        self.epoch += 1
+
 
     def forward_pass(self, inputs, target):
         inputs, target = inputs.to(self.opt.device), target.to(self.opt.device)        

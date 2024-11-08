@@ -14,13 +14,13 @@ class BaseUnlearningMethod(ABC):
     def __init__(self, opt, model, forgetting_set=None, prenet=None):
         self.opt = opt
         self.model = model.to(opt.device)
-        #self.save_files = {'train_top1':[], 'val_top1':[], 'train_time_taken':0}
-        self.best_top1 = -1
+        #self.best_top1 = -1
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0025)
-        self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
-        self.top1 = -1
+        #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
+        #self.top1 = -1
         self.scaler = GradScaler()  # mixed precision
         self.save_files = {"train_time_taken": 0} 
+        self.curr_step = 0
         # optional prenet
         if prenet is not None:
             self.prenet = prenet.to(opt.device)
@@ -81,10 +81,8 @@ class BaseUnlearningMethod(ABC):
                 self.scaler.scale(loss).backward()  # Backward pass
                 self.scaler.step(self.optimizer) # Update the weights
                 self.scaler.update() # Update the scaler
-                self.scheduler.step() # Update the learning rate
                 self.curr_step += 1
-                if self.curr_step > self.opt.train_iters:
-                    break
+        self.scheduler.step() # Update the learning rate
         return
 
 
@@ -173,7 +171,7 @@ class BaseUnlearningMethod(ABC):
         self.logger.log_metrics({
             "validation_retain_accuracy": accuracy_retain,
             "validation_forget_accuracy": accuracy_forget,
-            "step": self.curr_step if hasattr(self, "curr_step") else self.epoch
+            "step": self.epoch
         })
         
         self.model.train()  
