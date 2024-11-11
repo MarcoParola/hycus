@@ -7,7 +7,7 @@ import wandb
 from tqdm import tqdm
 
 #from src.utils import get_early_stopping, get_save_model_callback
-from src.models.resnet import ResNet, ResidualBlock
+from src.models.resnet import ResNet9, ResidualBlock
 from src.datasets.dataset import load_dataset
 from src.log import get_loggers
 from omegaconf import OmegaConf
@@ -34,7 +34,7 @@ def main(cfg):
 
     # TODO use load_model function defined in src/models/model.py
     # remember to fix that function
-    model = ResNet(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
+    model = ResNet9(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)

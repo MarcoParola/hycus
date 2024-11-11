@@ -254,9 +254,9 @@ class Icus(BaseUnlearningMethod):
 #@hydra.main(config_path="../../config", config_name="config")
 def main(cfg):
     print("hello")
-    from src.models.resnet import ResNet, ResidualBlock
+    from src.models.resnet import ResNet9, ResidualBlock
 
-    model = ResNet(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
+    model = ResNet9(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
 
     icus = Icus(cfg, model, 128, 10, None, None, None)
 

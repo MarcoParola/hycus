@@ -2,7 +2,7 @@ import torch
 import torchvision
 import numpy as np
 import os
-from src.models.resnet import ResNet, ResidualBlock
+from src.models.resnet import ResNet9, ResidualBlock
 
 
 # goodbye and thank you for all the fish: https://huggingface.co/anonauthors 
@@ -15,7 +15,7 @@ def load_model(model_name, checkpoint=None, device='cpu'):
     """
     model = None
     if model_name == 'resnet':
-        model=ResNet(ResidualBlock)
+        model=ResNet9(ResidualBlock)
     else:
         raise ValueError(f'Unknown model: {model_name}')
     model.load_state_dict(torch.load(checkpoint, map_location=device))

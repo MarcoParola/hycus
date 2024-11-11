@@ -5,7 +5,7 @@ import os
 
 from torch import nn
 from torchvision import models
-from torchvision.models import ResNet34_Weights, resnet34, VGG11_Weights, vgg11
+from torchvision.models import ResNet934_Weights, resnet34, VGG11_Weights, vgg11
 
 from src.models.classifier import ClassifierModule
 

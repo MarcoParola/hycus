@@ -14,7 +14,7 @@ from src.utils import get_forgetting_subset
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_datasets
-from src.models.resnet import ResNet, ResidualBlock # TODO remove this import
+from src.models.resnet import ResNet9, ResidualBlock # TODO remove this import
 from src.metrics.metrics import get_membership_attack_prob, compute_mia, prepare_membership_inference_attack
 from src.unlearning_methods.icus import Icus
 
