@@ -62,6 +62,34 @@ class ResNet9(nn.Module):
         features = self.avg_pool(out)
         features = features.view(features.size(0), -1)
         return features
+    
+    def get_weights(self, nlayers):
+        weights = {'weights': [], 'bias': []}
+        for l in nlayers:
+            if l == 1:
+                w = self.fc.weight.data
+                b = self.fc.bias.data
+                weights['weights'].append(w)
+                weights['bias'].append(b)
+            elif l == 2:
+                pass
+            elif l == 3:
+                pass
+            else:
+                pass
+        return weights
+
+    def set_weights(self, weights, nlayers):
+        for l in nlayers:
+            if l == 1:
+                self.fc.weight.data = weights['weights'][0]
+                self.fc.bias.data = weights['bias'][0]
+            elif l == 2:
+                pass
+            elif l == 3:
+                pass
+        return
+
 
 # Define the ResNet18
 class ResNet18(nn.Module):

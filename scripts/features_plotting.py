@@ -38,7 +38,7 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
     plt.figure(figsize=(14, 6))
 
     # Plot PCA
-    plt.subplot(1, 2, 1)
+    plt.subplot(1, 2, 1) #2,3,1
     for classe in np.unique(labels_np):
         if classe in forgetting_subset:
             indices = np.where(labels_np == classe)
