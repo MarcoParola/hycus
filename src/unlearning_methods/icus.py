@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from src.unlearning_methods.base import BaseUnlearningMethod
 from src.utils import retrieve_weights
 from src.metrics.metrics import compute_metrics
-import hydra
 
 class Autoencoder(nn.Module):
     def __init__(self, opt, input_dim, embed_dim, output_dim=None, num_layers=3, vae=False, bias=True):
@@ -25,7 +24,7 @@ class Autoencoder(nn.Module):
                 nn.ReLU(inplace=True) if not vae else nn.Identity(inplace=True)
             )
             self.decoder = nn.Sequential(
-                nn.Linear(self.embed_dim[1], self.output_dim)
+                nn.Linear(self.embed_dim[0], self.output_dim)
             )
         elif num_layers == 3:
             self.encoder = nn.Sequential(
@@ -82,8 +81,7 @@ class JointAutoencoder(nn.Module):
     def forward(self, x):
         descr_in, weight_in, _ = x  
         descr_in = descr_in.to(self.device)  
-        weight_in = weight_in.to(self.device) 
-
+        weight_in = weight_in.to(self.device)
         latent_descr = self.encode_descr(descr_in)
         latent_weight = self.encode_weight(weight_in)
         
@@ -96,21 +94,20 @@ class JointAutoencoder(nn.Module):
 
 
 class Icus(BaseUnlearningMethod):
-    def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, val_loader, logger=None):
+    def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger=None):
         super().__init__(opt, model)
         self.fc = model.fc
         self.orig_model = copy.deepcopy(self.model)
         self.wrapped_train_loader = wrapped_train_loader
         self.logger = logger
-        self.val_loader = val_loader
-        # Inizialize desriptions and other stuff
         self.description = wrapped_train_loader.dataset.descr
+        self.weights = wrapped_train_loader.dataset.weights
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        weights, bias = retrieve_weights(model)
+        for classe, weights, descr, infgt in wrapped_train_loader:
+            for i in range(len(classe)):
+                self.weights[i] = weights[i]
         self.device = opt.device
-        # Concatenation weights and bias
-        self.weights = torch.cat((weights, bias.view(-1, 1)), dim=1)
         #autoencoder
         descr_ae = Autoencoder(opt, flatten_description.shape[1], embed_dim=512, num_layers=2)  
         descr_ae.to(opt.device)
@@ -120,8 +117,8 @@ class Icus(BaseUnlearningMethod):
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Autoencoder optimizers
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-3)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-3)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-6)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-6)
         
         
 
@@ -131,37 +128,27 @@ class Icus(BaseUnlearningMethod):
     def icus_distance(self, weights_encoded, descr_encoded):
         return nn.functional.cosine_similarity(weights_encoded, descr_encoded)
 
-    def forward_pass(self, descr, weights, target):
-        descr = descr.view(descr.size(0), -1)
-        weights = weights.view(weights.size(0), -1)
-        att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
-        output = (att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight)
-        loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight)
-        return output, loss
-        
-
-    def unlearn(self, model, unlearning_train_loader, val_loader, forgetting_subset):
+    
+    def unlearn(self, model, unlearning_train, val_loader):
         self.model.fc.weight.requires_grad_(True)
         self.current_step = 0
-        for epoch in range(self.opt.max_epochs):
+        for epoch in range(self.opt.unlearn.max_epochs):
             print("Epoch: ", epoch)
-            self.train_one_epoch(train_loader, epoch) 
-            #self.test_unlearning_effect(self.wrapped_train_loader, self.val_loader, self.forgetting_subset, epoch, False)
+            self.train_one_epoch(unlearning_train, val_loader, epoch) 
         return self.model
 
-    
-    def train_one_epoch(self, train_loader, val_loader, epoch):
+
+    def train_one_epoch(self, unlearning_train, val_loader, epoch):
         print("Train epoch start")
         self.joint_ae.train()  # Joint Autoencoder in training mode
         self.model.fc.train()  # Model in training mode
 
         running_loss = 0.0
 
-        for batch in train_loader:
+        for batch in unlearning_train:
             targets, weights, descr, infgt = batch
             weights, descr, infgt, targets = weights.to(self.device), descr.to(self.device), infgt.to(self.device), targets.to(self.device)
-            descr = descr.view(descr.size(0), -1)  # Output: torch.Size([10, 2304])
-
+            descr = descr.view(descr.size(0), -1)
             # Update the weights of the model
             for i in self.forgetting_subset:
                 if self.opt.forgetting_set_strategy == "random_values":
@@ -176,90 +163,66 @@ class Icus(BaseUnlearningMethod):
             
             weights.requires_grad_(True)
             descr.requires_grad_(True)
-
+            
             # Forward pass
-            output, loss = self.forward_pass(descr, weights, targets)
+            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
+
+            loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight)
             self.logger.log_metrics({"loss": loss.item()}, step=self.current_step)
 
             # Backward pass
             self.descr_optimizer.zero_grad()
             self.weights_optimizer.zero_grad()
-            loss.backward()  # Backpropagation
+
+            loss.backward(retain_graph=True)  # Backpropagation
             self.descr_optimizer.step()  # Update autoencoder
             self.weights_optimizer.step() 
+
             running_loss += loss.item()
 
-        print(f"Mean loss in this epoch: {running_loss / len(loader)}")
-        self.logger.log_metrics({"train/average_loss": running_loss / len(loader)}, step=epoch)
-
-        print("Val epoch start")
-        self.joint_ae.eval()  
-        self.model.fc.eval() 
-        running_loss = 0.0
-        for batch in val_loader:
-            targets, weights, descr, infgt = batch
-            weights, descr, infgt, targets = weights.to(self.device), descr.to(self.device), infgt.to(self.device), targets.to(self.device)
-            descr = descr.view(descr.size(0), -1)
-
-            # Update the weights of the model
-            for i in self.forgetting_subset:
-                if self.opt.forgetting_set_strategy == "random_values":
-                    weights[i] = torch.randn_like(weights[i], requires_grad=True)
-                elif self.opt.forgetting_set_strategy == "random_class":
-                    j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
-                    weights[i] = weights[j]
-                elif self.opt.forgetting_set_strategy == "zeros":
-                    weights[i] = torch.zeros_like(weights[i], requires_grad=True)
-                else:
-                    raise ValueError("Invalid forgetting set strategy")
-
-            weights.requires_grad_(True)
-            descr.requires_grad_(True)
-
-            # Forward pass
-            output, loss = self.forward_pass(descr, weights, targets)
-            self.logger.log_metrics({"loss": loss.item()}, step=self.current_step)
-
-
+        print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
+        self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
+        self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
         
-
 
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
         loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + \
                nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) #+ 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))
-        print("Cosine similarity: ", 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)))
+        #print("Cosine similarity: ", 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)))
         return loss 
 
 
-    def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch, test = True):
+    def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
         self.model.eval()
         self.joint_ae.eval()
+        weights_penultimate = torch.zeros(wrapped_loader.dataset.weights_penultimate.shape[0])
+        bias_penultimate = torch.zeros(wrapped_loader.dataset.bias_penultimate.shape[0])
+        weights_penultimate = weights_penultimate.to(self.opt.device)
+        bias_penultimate = bias_penultimate.to(self.opt.device)
         for i in range(self.opt.dataset.classes):
             _,w,d,_ = wrapped_loader.dataset[i]
             d = d.view(-1)
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
+            w = w.to(self.opt.device)
             w = self.joint_ae.ae_w.decode(latent_w)
-            weights = w[:-1]
-            bias = w[-1]
+            weights_last = w[:wrapped_loader.dataset.weights_last.shape[1]]
+            bias_last = w[wrapped_loader.dataset.weights_last.shape[1]+1]
+            if i not in forgetting_subset:
+                weights_penultimate += w[wrapped_loader.dataset.weights_last.shape[1]+1:wrapped_loader.dataset.weights_last.shape[1]+1+wrapped_loader.dataset.weights_penultimate.shape[0]]
+                bias_penultimate += w[wrapped_loader.dataset.weights_last.shape[1]+1+wrapped_loader.dataset.weights_penultimate.shape[0]:]
             with torch.no_grad():
-                self.model.fc.weight[i] = weights
-                self.model.fc.bias[i] = bias
-        metrics = compute_metrics(self.model,loader,self.opt.dataset.classes,forgetting_subset, test) 
+                self.model.fc.weight[i] = weights_last
+                self.model.fc.bias[i] = bias_last
+        weights_penultimate /= (self.opt.dataset.classes-len(forgetting_subset))
+        bias_penultimate /= (self.opt.dataset.classes-len(forgetting_subset))
+        with torch.no_grad():
+            weights_penultimate = weights_penultimate.view(128, 128, 3, 3)
+            self.model.layer2.conv2.weight.data = weights_penultimate
+            self.model.layer2.bn2.bias.data = bias_penultimate 
+
+        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset) 
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
         
-
-#@hydra.main(config_path="../../config", config_name="config")
-def main(cfg):
-    print("hello")
-    from src.models.resnet import ResNet9, ResidualBlock
-
-    model = ResNet9(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
-
-    icus = Icus(cfg, model, 128, 10, None, None, None)
-
-if __name__ == "__main__":
-    main()
-

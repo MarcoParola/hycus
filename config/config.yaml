@@ -8,9 +8,9 @@ seed: -1
 
 model: resnet
 unlearning_method: icus
-forgetting_set_strategy: random_values
+forgetting_set_strategy: random_class
 forgetting_set: random
-forgetting_set_size: 1
+forgetting_set_size: 2
 
 dataset: 
   name: cifar10
@@ -24,14 +24,19 @@ SSDselectwt: 0.1
 
 train:
   batch_size: 32
-  max_epochs: 140
-  lr: 3e-5
+  max_epochs: 100
+  lr: 1e-3
   save_path: checkpoints/
   num_workers: 1
   patience: 10
 
-train_iters: 3378
-max_epochs: 10
+unlearn:
+  lr: 1e-4
+  max_epochs: 100
+  temp: 1
+  scrub_steps: 6
+
+train_iters: 999
 
 log:
   path: ./logs

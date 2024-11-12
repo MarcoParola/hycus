@@ -53,9 +53,14 @@ def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_s
     
     # Trova gli indici dei campioni da dimenticare
     forget_indices = []
-    for class_idx in forgetting_subset:
-        forget_indices = np.where(all_labels == class_idx)[0]
     
+    for class_idx in forgetting_subset:
+        class_indices = np.where(all_labels == class_idx)[0]
+        forget_indices.extend(class_indices)  # Aggiunge gli indici alla lista
+
+    # Se vuoi evitare duplicati (nel caso ci siano sovrapposizioni), puoi convertire in un set:
+    forget_indices = list(set(forget_indices))
+
     # Trova gli indici dei campioni da mantenere
     retain_indices = list(set(all_indices) - set(forget_indices))
     
@@ -188,7 +193,7 @@ class ParameterPerturber:
 # runs of the TPE search from Optuna (Akiba et al. 2019), for
 # values α ∈ [0.1, 100]) and λ ∈ [0.1, 5]. We only conducted
 # this search for the Rocket and Veh2 classes. We use λ=1
-# and α=10 for all ResNet918 CIFAR tasks. For PinsFaceRecognition, we use α=50 and λ=0.1 due to the much greater
+# and α=10 for all ResNet18 CIFAR tasks. For PinsFaceRecognition, we use α=50 and λ=0.1 due to the much greater
 # similarity between classes. ViT also uses λ=1 on all CIFAR
 # tasks. We change α=10 to α=5 for slightly improved performance on class and α=25 on sub-class unlearning.
     
@@ -225,9 +230,15 @@ def ssd_tuning(
  
 
 def retrieve_weights(model):
-    weights = model.fc.weight.data
-    bias = model.fc.bias.data
-    return weights, bias
+    # Pesi dell'ultimo layer (fully connected)
+    weights_last = model.fc.weight.data
+    bias_last = model.fc.bias.data
+
+    # Pesi del penultimo layer (ultimo blocco residuo di layer2)
+    weights_penultimate = model.layer2.conv2.weight.data.view(-1)
+    bias_penultimate = model.layer2.bn2.bias.data.view(-1)
+
+    return weights_last, bias_last, weights_penultimate, bias_penultimate
 
 
 class LinearLR(_LRScheduler):

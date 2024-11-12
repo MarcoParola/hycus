@@ -51,13 +51,17 @@ class ResNet9(nn.Module):
         return layer
 
     def forward(self, x):
+        features = self.extract_features(x)
+        output = self.fc(features)    
+        return output
+
+    def extract_features(self, x):
         out = self.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
-        out = self.avg_pool(out)
-        out = out.view(out.size(0), -1)
-        out = self.fc(out)
-        return out
+        features = self.avg_pool(out)
+        features = features.view(features.size(0), -1)
+        return features
 
 # Define the ResNet18
 class ResNet18(nn.Module):
@@ -84,16 +88,20 @@ class ResNet18(nn.Module):
         return layer
 
     def forward(self, x):
+        features = self.extract_features(x)
+        out = self.fc(features)
+        return out
+
+    def extract_features(self, x):
         out = self.relu(self.bn1(self.conv1(x)))
         out = self.maxpool(out)
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
-        out = self.avg_pool(out)
-        out = out.view(out.size(0), -1)
-        out = self.fc(out)
-        return out
+        features = self.avg_pool(out)
+        features = features.view(features.size(0), -1)
+        return features
 
 
 if __name__ == '__main__':

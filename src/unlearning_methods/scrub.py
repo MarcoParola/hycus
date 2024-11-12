@@ -11,36 +11,38 @@ from src.unlearning_methods.base import BaseUnlearningMethod
 
 class Scrub(BaseUnlearningMethod):
 
-    def __init__(self, opt, model, test_loader, val_loader, logger, alpha=0.1, kd_T=4.0):
+    def __init__(self, opt, model, forgetting_subset, logger, alpha=0.1, kd_T=1.0):
         super().__init__(opt, model)
         print("Inizializzazione di Scrub")
         self.og_model = copy.deepcopy(model)  # original model copy
+        self.forgetting_subset = forgetting_subset
         self.criterion = nn.CrossEntropyLoss()
         self.logger = logger
-        self.val_loader = val_loader
-        self.test_loader = test_loader
         self.alpha = alpha
         self.kd_T = kd_T
-        #self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005, weight_decay=0.1)
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=1e-6, momentum=0.9, weight_decay=0.9)
-        self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
-        self.msteps = 20000 # Misleading value, to be changed. Probably the logic in changing curr_step should be changed. I think
-                            # it should be updated after each epoch, not after each step, otherwise there's the risk of stopping
-                            # in the middle of an epoch where loss is too high.
-                            # I set msteps to a so high value to make it ininfluent. TO REVIEW
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=opt.unlearn.lr, momentum=0.9, weight_decay=0.001)
+        #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.1)
+        self.msteps = opt.unlearn.scrub_steps//2 
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
-    def unlearn(self, unlearning_forget_train_loader, unlearning_retain_train_loader, val_loader, forgetting_subset):
+    def unlearn(self, retain_loader, forget_loader, val_loader=None):
         print("Start unlearning process")
+        if val_loader is not None:
+            self.val_loader = val_loader
+        self.curr_step = 0
+        self.epoch = 0
 
-        while self.curr_step < self.opt.train_iters:
-            if self.curr_step < self.msteps:
+        while self.epoch < self.opt.unlearn.scrub_steps:
+            print(f"Epoch {self.epoch}")
+            print(f"Msteps {self.msteps}")
+            if self.epoch < self.msteps:
                 self.maximize = True
-                self._train_one_phase(loader=forget_loader, train_loader=train_loader)
+                self._train_one_phase(loader=forget_loader)
             
             self.maximize = False
-            self._train_one_phase(loader=train_loader, train_loader=train_loader)
+            self._train_one_phase(loader=retain_loader)
             if self.val_loader is not None:
                 self.validate(self.val_loader)
         return self.model
@@ -54,12 +56,14 @@ class Scrub(BaseUnlearningMethod):
         loss = loss * (temperature ** 2) / student_output.shape[0]
         return loss
 
-    def _train_one_phase(self, loader, train_loader):
+    def _train_one_phase(self, loader):
         time_start = time.process_time()
         self.train_one_epoch(loader=loader)
         self.save_files['train_time_taken'] += time.process_time() - time_start
+        self.epoch += 1
 
-    def forward_pass(self, inputs, target, infgt):
+
+    def forward_pass(self, inputs, target):
         inputs, target = inputs.to(self.opt.device), target.to(self.opt.device)        
         # Forward pass (with gradients)
         output = self.model(inputs)

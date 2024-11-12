@@ -37,8 +37,16 @@ class IcusUnlearningDataset(Dataset):
         """
         self.classes = torch.arange(0, num_classes)
         self.descr = self.calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
-        self.weights, self.bias=retrieve_weights(model)
-        self.weights = torch.cat((self.weights, self.bias.view(-1, 1)), dim=1)
+        self.weights_last, self.bias_last, self.weights_penultimate, self.bias_penultimate=retrieve_weights(model)
+        self.weights_last = self.weights_last.to(device)
+        self.bias_last = self.bias_last.to(device)
+        self.weights_penultimate = self.weights_penultimate.to(device)
+        self.bias_penultimate = self.bias_penultimate.to(device)
+        #TODO POTREBBE ESSER UTILE STAMPARE LA SHAPE DI self.weights_penultimate E self.bias_penultimate
+        self.weights = torch.zeros(num_classes, self.weights_last.shape[1] + 1 + self.weights_penultimate.shape[0] + self.bias_penultimate.shape[0])
+        
+        for i in range(num_classes):
+            self.weights[i] = torch.cat([self.weights_last[i].view(-1), self.bias_last[i].view(-1), self.weights_penultimate.view(-1), self.bias_penultimate.view(-1)], dim=0)
         self.infgt = infgt  # Tensor dei flag infgt (1 o 0)
         self.device = device
 
@@ -89,15 +97,17 @@ def load_words_to_array(file_path):
         words = [line.strip() for line in f if line.strip()]
     return words    
 
-def get_unlearning_dataset(unlearning_method, 
 
-
-    unlearning_train_forget = None
-    unlearning_train_retain = None
-    unlearning_val_forget = None
-    unlearning_val_retain = None
-
-    return 
+def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset): 
+    if unlearning_method_name == 'icus':
+        num_classes = cfg.dataset.classes
+        infgt = torch.tensor([1 if i in forgetting_subset else 0 for i in range(len(train))])  
+        unlearning_train = IcusUnlearningDataset(cfg.dataset.name, infgt, model, num_classes, cfg.device)
+        unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=10, num_workers=0)
+    else:
+        unlearning_train = UnlearningDataset(train, forget_indices)
+        unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=cfg.train.batch_size, num_workers=8)
+    return unlearning_train
 
 
     
