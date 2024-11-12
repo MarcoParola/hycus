@@ -3,6 +3,8 @@ import torchvision
 import numpy as np
 from torchvision import transforms
 import os
+import math
+from torch.utils.data import DataLoader
 
 # TODO, probabilmente c'è da introdurre nuova logica per includere testi
 class ImgTextDataset(torch.utils.data.Dataset):
@@ -147,6 +149,17 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.2, test_split=0.2):
     return train, val, test
 
 
+def get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset):
+    if cfg.unlearning_method == 'scrub':
+        # need to balance number of steps, so need to have different batch sizes
+        retain_batch_size = math.ceil(cfg.train.batch_size * (cfg.dataset.classes - cfg.forgetting_set_size) / cfg.forgetting_set_size)
+        forget_batch_size = cfg.train.batch_size
+        retain_loader = DataLoader(retain_dataset, batch_size=retain_batch_size, num_workers=8) 
+        forget_loader = DataLoader(forget_dataset, batch_size=forget_batch_size, num_workers=8)
+    else:
+        retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size, num_workers=8)
+        forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size, num_workers=8)
+    return retain_loader, forget_loader
 
 
 

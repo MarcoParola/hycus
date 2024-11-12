@@ -42,8 +42,11 @@ def main(cfg):
 
     # Early stopping
     #early_stopping = get_early_stopping(cfg)
-
+    print(cfg.train.max_epochs)
     for epoch in range(cfg.train.max_epochs):
+        print(f"Epoch {epoch+1}/{cfg.train.max_epochs}")
+        if epoch >= cfg.train.max_epochs:
+            break
         model.train()
         train_loss = 0
         for i, (x, y) in enumerate(tqdm(train_loader)):

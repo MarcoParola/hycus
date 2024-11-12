@@ -230,9 +230,15 @@ def ssd_tuning(
  
 
 def retrieve_weights(model):
-    weights = model.fc.weight.data
-    bias = model.fc.bias.data
-    return weights, bias
+    # Pesi dell'ultimo layer (fully connected)
+    weights_last = model.fc.weight.data
+    bias_last = model.fc.bias.data
+
+    # Pesi del penultimo layer (ultimo blocco residuo di layer2)
+    weights_penultimate = model.layer2.conv2.weight.data.view(-1)
+    bias_penultimate = model.layer2.bn2.bias.data.view(-1)
+
+    return weights_last, bias_last, weights_penultimate, bias_penultimate
 
 
 class LinearLR(_LRScheduler):

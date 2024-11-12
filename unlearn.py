@@ -5,9 +5,8 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
-#from src.utils import get_early_stopping, get_save_model_callback
 from src.models.model import load_model
-from src.datasets.dataset import load_dataset
+from src.datasets.dataset import load_dataset, get_retain_forget_dataloaders
 from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
@@ -17,6 +16,7 @@ from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset
 from src.models.resnet import ResNet, ResidualBlock # TODO remove this import
 from src.unlearning_methods.icus import Icus
+
 
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
@@ -64,8 +64,8 @@ def main(cfg):
         print(f'{k}: {v}')
 
     # Plot PCA
-    #plot_features(model, test_loader, False)
-    plot_features_3d(model, test_loader, False)
+    plot_features(model, test_loader, False)
+    #plot_features_3d(model, test_loader, False)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -76,9 +76,8 @@ def main(cfg):
     
     unlearning_method_name = cfg.unlearning_method
     unlearning_train = get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset)
-    #MODIFY HERE TO MANAGE THE BATCH SIZE IF UNL_METHOD IS SCRUB
-    retain_loader = DataLoader(retain_dataset, batch_size=cfg.train.batch_size*2, num_workers=8) 
-    forget_loader = DataLoader(forget_dataset, batch_size=cfg.train.batch_size//2, num_workers=8)
+    
+    retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
     
     # unlearning process
     unlearning_method = get_unlearning_method(cfg, unlearning_method_name, model, unlearning_train, forgetting_subset, loggers)
@@ -92,14 +91,14 @@ def main(cfg):
     elif unlearning_method_name == 'ssd':
         new_model = unlearning_method.unlearn() # TODO
     
-    #plot_features(new_model, train_loader, True) 
-    plot_features3d(new_model, train_loader, True)
+    plot_features(new_model, train_loader, True) 
+    #plot_features_3d(new_model, train_loader, True)
    
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
-            "retain_test_accuracy": metrics[accuracy_retaining],
-            "forget_test_accuracy": metrics[accuracy_forgetting],
+            "retain_test_accuracy": metrics['accuracy_retaining'],
+            "forget_test_accuracy": metrics['accuracy_forgetting'],
             "step": 0
         })
     print("Accuracy forget ", metrics['accuracy_forgetting'])

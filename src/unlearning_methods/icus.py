@@ -101,12 +101,13 @@ class Icus(BaseUnlearningMethod):
         self.wrapped_train_loader = wrapped_train_loader
         self.logger = logger
         self.description = wrapped_train_loader.dataset.descr
+        self.weights = wrapped_train_loader.dataset.weights
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        weights, bias = retrieve_weights(model)
+        for classe, weights, descr, infgt in wrapped_train_loader:
+            for i in range(len(classe)):
+                self.weights[i] = weights[i]
         self.device = opt.device
-        # Concatenation weights and bias
-        self.weights = torch.cat((weights, bias.view(-1, 1)), dim=1)
         #autoencoder
         descr_ae = Autoencoder(opt, flatten_description.shape[1], embed_dim=512, num_layers=2)  
         descr_ae.to(opt.device)
@@ -116,8 +117,8 @@ class Icus(BaseUnlearningMethod):
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Autoencoder optimizers
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-3)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-3)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-4)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-4)
         
         
 
@@ -194,17 +195,32 @@ class Icus(BaseUnlearningMethod):
     def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
         self.model.eval()
         self.joint_ae.eval()
+        weights_penultimate = torch.zeros(wrapped_loader.dataset.weights_penultimate.shape[0])
+        bias_penultimate = torch.zeros(wrapped_loader.dataset.bias_penultimate.shape[0])
+        weights_penultimate = weights_penultimate.to(self.opt.device)
+        bias_penultimate = bias_penultimate.to(self.opt.device)
         for i in range(self.opt.dataset.classes):
             _,w,d,_ = wrapped_loader.dataset[i]
             d = d.view(-1)
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
+            w = w.to(self.opt.device)
             w = self.joint_ae.ae_w.decode(latent_w)
-            weights = w[:-1]
-            bias = w[-1]
+            weights_last = w[:wrapped_loader.dataset.weights_last.shape[1]]
+            bias_last = w[wrapped_loader.dataset.weights_last.shape[1]+1]
+            if i not in forgetting_subset:
+                weights_penultimate += w[wrapped_loader.dataset.weights_last.shape[1]+1:wrapped_loader.dataset.weights_last.shape[1]+1+wrapped_loader.dataset.weights_penultimate.shape[0]]
+                bias_penultimate += w[wrapped_loader.dataset.weights_last.shape[1]+1+wrapped_loader.dataset.weights_penultimate.shape[0]:]
             with torch.no_grad():
-                self.model.fc.weight[i] = weights
-                self.model.fc.bias[i] = bias
+                self.model.fc.weight[i] = weights_last
+                self.model.fc.bias[i] = bias_last
+        weights_penultimate /= (self.opt.dataset.classes-len(forgetting_subset))
+        bias_penultimate /= (self.opt.dataset.classes-len(forgetting_subset))
+        with torch.no_grad():
+            weights_penultimate = weights_penultimate.view(128, 128, 3, 3)
+            self.model.layer2.conv2.weight.data = weights_penultimate
+            self.model.layer2.bn2.bias.data = bias_penultimate 
+
         metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset) 
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
         print("Accuracy forget ", metrics['accuracy_forgetting'])

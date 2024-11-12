@@ -88,6 +88,8 @@ def plot_features_3d(model, data_loader, unlearned=False):
     features_np = torch.cat(all_features).numpy()
     labels_np = torch.cat(all_labels).numpy()
 
+    print(features_np)
+
     # PCA transformation to 3D
     pca = PCA(n_components=3)
     X_pca = pca.fit_transform(features_np)
