@@ -14,7 +14,7 @@ from scripts.features_plotting import plot_features, plot_features_3d
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset
-from src.models.resnet import ResNet, ResidualBlock # TODO remove this import
+from src.models.resnet import ResNet9, ResNet18, ResidualBlock # TODO remove this import
 from src.unlearning_methods.icus import Icus
 
 
@@ -64,8 +64,8 @@ def main(cfg):
         print(f'{k}: {v}')
 
     # Plot PCA
-    plot_features(model, test_loader, False)
-    #plot_features_3d(model, test_loader, False)
+    plot_features(model, test_loader, forgetting_subset, False)
+    plot_features_3d(model, test_loader, forgetting_subset, False)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -91,8 +91,8 @@ def main(cfg):
     elif unlearning_method_name == 'ssd':
         new_model = unlearning_method.unlearn() # TODO
     
-    plot_features(new_model, train_loader, True) 
-    #plot_features_3d(new_model, train_loader, True)
+    plot_features(new_model, test_loader, forgetting_subset, True) 
+    #plot_features_3d(new_model, test_loader, forgetting_subset, True)
    
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)

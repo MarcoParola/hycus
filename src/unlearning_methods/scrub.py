@@ -11,7 +11,7 @@ from src.unlearning_methods.base import BaseUnlearningMethod
 
 class Scrub(BaseUnlearningMethod):
 
-    def __init__(self, opt, model, forgetting_subset, logger, alpha=0.1, kd_T=4.0):
+    def __init__(self, opt, model, forgetting_subset, logger, alpha=0.1, kd_T=1.0):
         super().__init__(opt, model)
         print("Inizializzazione di Scrub")
         self.og_model = copy.deepcopy(model)  # original model copy
@@ -20,10 +20,10 @@ class Scrub(BaseUnlearningMethod):
         self.logger = logger
         self.alpha = alpha
         self.kd_T = kd_T
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0005, momentum=0.9, weight_decay=0.001)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=opt.unlearn.lr, momentum=0.9, weight_decay=0.001)
         #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
-        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=3, gamma=0.1)
-        self.msteps = opt.scrub_steps//2 
+        self.scheduler = optim.lr_scheduler.StepLR(self.optimizer, step_size=5, gamma=0.1)
+        self.msteps = opt.unlearn.scrub_steps//2 
         self.save_files = {"train_time_taken": 0, "val_top1": []}
         self.curr_step = 0  
 
@@ -34,7 +34,7 @@ class Scrub(BaseUnlearningMethod):
         self.curr_step = 0
         self.epoch = 0
 
-        while self.epoch < self.opt.scrub_steps:
+        while self.epoch < self.opt.unlearn.scrub_steps:
             print(f"Epoch {self.epoch}")
             print(f"Msteps {self.msteps}")
             if self.epoch < self.msteps:

@@ -29,7 +29,7 @@ class BaseUnlearningMethod(ABC):
 
     def unlearn(self, train_loader, test_loader, val_loader=None):
         self.epoch = 0
-        while self.epoch < self.opt.max_epochs: 
+        while self.epoch < self.opt.unlearn.max_epochs: 
             time_start = time.process_time() 
             self.train_one_epoch(loader=train_loader) 
             self.epoch += 1

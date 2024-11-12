@@ -25,10 +25,10 @@ class BadT(BaseUnlearningMethod):
         self.random_model.eval() 
         
         # Inizializzazione dell'ottimizzatore e scaler per mixed precision
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.opt.train.lr, momentum=0.9, weight_decay=0.001)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.opt.unlearn.lr, momentum=0.9, weight_decay=0.001)
         self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=3, verbose=False)
         self.scaler = GradScaler()
-        self.kltemp = opt.temp  # Temperatura per la KL-divergenza (knowledge distillation)
+        self.kltemp = opt.unlearn.temp  # Temperatura per la KL-divergenza (knowledge distillation)
 
     def _random_weights_init(self, model):
         if isinstance(model, nn.Conv2d) or isinstance(model, nn.Linear):

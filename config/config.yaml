@@ -30,10 +30,13 @@ train:
   num_workers: 1
   patience: 10
 
+unlearn:
+  lr: 1e-4
+  max_epochs: 100
+  temp: 1
+  scrub_steps: 6
+
 train_iters: 999
-max_epochs: 100
-temp: 1
-scrub_steps: 10
 
 log:
   path: ./logs

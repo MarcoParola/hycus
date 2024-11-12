@@ -6,7 +6,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from sklearn.manifold import TSNE
 from datetime import datetime
 
-def plot_features(model, data_loader, unlearned=False): 
+def plot_features(model, data_loader, forgetting_subset, unlearned=False): 
     model.eval()  
 
     all_features = []
@@ -40,8 +40,12 @@ def plot_features(model, data_loader, unlearned=False):
     # Plot PCA
     plt.subplot(1, 2, 1)
     for classe in np.unique(labels_np):
-        indices = np.where(labels_np == classe)
-        plt.scatter(X_pca[indices, 0], X_pca[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
+        if classe in forgetting_subset:
+            indices = np.where(labels_np == classe)
+            plt.scatter(X_pca[indices, 0], X_pca[indices, 1], label=f'Class forget {classe}',alpha=0.4, s=2)
+        else:
+            indices = np.where(labels_np == classe)
+            plt.scatter(X_pca[indices, 0], X_pca[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
     plt.xlabel('PCA Component 1')
     plt.ylabel('PCA Component 2')
     plt.title('PCA of extracted features from the model')
@@ -51,8 +55,12 @@ def plot_features(model, data_loader, unlearned=False):
     # Plot t-SNE
     plt.subplot(1, 2, 2)
     for classe in np.unique(labels_np):
-        indices = np.where(labels_np == classe)
-        plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
+        if classe in forgetting_subset:
+            indices = np.where(labels_np == classe)
+            plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class forget {classe}', alpha=0.4, s=2)
+        else:
+            indices = np.where(labels_np == classe)
+            plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
     plt.xlabel('t-SNE Component 1')
     plt.ylabel('t-SNE Component 2')
     plt.title('t-SNE of extracted features from the model')
@@ -68,7 +76,7 @@ def plot_features(model, data_loader, unlearned=False):
     plt.show()
 
 
-def plot_features_3d(model, data_loader, unlearned=False): 
+def plot_features_3d(model, data_loader, forgetting_subset, unlearned=False): 
     model.eval()  
 
     all_features = []
@@ -88,8 +96,6 @@ def plot_features_3d(model, data_loader, unlearned=False):
     features_np = torch.cat(all_features).numpy()
     labels_np = torch.cat(all_labels).numpy()
 
-    print(features_np)
-
     # PCA transformation to 3D
     pca = PCA(n_components=3)
     X_pca = pca.fit_transform(features_np)
@@ -104,8 +110,12 @@ def plot_features_3d(model, data_loader, unlearned=False):
     # Plot PCA in 3D
     ax1 = fig.add_subplot(1, 2, 1, projection='3d')
     for classe in np.unique(labels_np):
-        indices = np.where(labels_np == classe)
-        ax1.scatter(X_pca[indices, 0], X_pca[indices, 1], X_pca[indices, 2], label=f'Class {classe}', alpha=0.5, s=10)
+        if classe in forgetting_subset:
+            indices = np.where(labels_np == classe)
+            ax1.scatter(X_pca[indices, 0], X_pca[indices, 1], X_pca[indices, 2], label=f'Class forget {classe}' ,alpha=0.4, s=2)
+        else:
+            indices = np.where(labels_np == classe)
+            ax1.scatter(X_pca[indices, 0], X_pca[indices, 1], X_pca[indices, 2], label=f'Class {classe}', alpha=0.4, s=2)
     ax1.set_xlabel('PCA Component 1')
     ax1.set_ylabel('PCA Component 2')
     ax1.set_zlabel('PCA Component 3')
@@ -116,8 +126,12 @@ def plot_features_3d(model, data_loader, unlearned=False):
     # Plot t-SNE in 3D
     ax2 = fig.add_subplot(1, 2, 2, projection='3d')
     for classe in np.unique(labels_np):
-        indices = np.where(labels_np == classe)
-        ax2.scatter(X_tsne[indices, 0], X_tsne[indices, 1], X_tsne[indices, 2], label=f'Class {classe}', alpha=0.5, s=10)
+        if classe in forgetting_subset:
+            indices = np.where(labels_np == classe)
+            ax2.scatter(X_tsne[indices, 0], X_tsne[indices, 1], X_tsne[indices, 2], label=f'Class forget {classe}',alpha=0.4, s=2)
+        else:
+            indices = np.where(labels_np == classe)
+            ax2.scatter(X_tsne[indices, 0], X_tsne[indices, 1], X_tsne[indices, 2], label=f'Class {classe}', alpha=0.4, s=2)
     ax2.set_xlabel('t-SNE Component 1')
     ax2.set_ylabel('t-SNE Component 2')
     ax2.set_zlabel('t-SNE Component 3')

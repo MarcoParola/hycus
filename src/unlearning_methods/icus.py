@@ -117,8 +117,8 @@ class Icus(BaseUnlearningMethod):
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Autoencoder optimizers
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-4)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-4)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=2e-6)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=2e-6)
         
         
 
@@ -132,7 +132,7 @@ class Icus(BaseUnlearningMethod):
     def unlearn(self, model, unlearning_train, val_loader):
         self.model.fc.weight.requires_grad_(True)
         self.current_step = 0
-        for epoch in range(self.opt.max_epochs):
+        for epoch in range(self.opt.unlearn.max_epochs):
             print("Epoch: ", epoch)
             self.train_one_epoch(unlearning_train, val_loader, epoch) 
         return self.model
