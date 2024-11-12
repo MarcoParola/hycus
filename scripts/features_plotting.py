@@ -57,7 +57,7 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
     for classe in np.unique(labels_np):
         if classe in forgetting_subset:
             indices = np.where(labels_np == classe)
-            plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class forget {classe}', alpha=0.4, s=2)
+            plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class forget {classe}', alpha=0.4, s=10)
         else:
             indices = np.where(labels_np == classe)
             plt.scatter(X_tsne[indices, 0], X_tsne[indices, 1], label=f'Class {classe}', alpha=0.4, s=2)
