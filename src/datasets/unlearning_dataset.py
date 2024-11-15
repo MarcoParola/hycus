@@ -37,7 +37,7 @@ class IcusUnlearningDataset(Dataset):
         """
         self.classes = torch.arange(0, num_classes)
         self.descr = self.calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
-        self.distinct, self.shared = retrieve_weights(model, num_classes, nlayers)
+        self.distinct, self.shared = model.get_weights(num_classes, nlayers)  # Tensor dei pesi distinti e condivisi
         self.infgt = infgt  # Tensor dei flag infgt (1 o 0)
         self.device = device
 
@@ -93,7 +93,7 @@ def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_ind
     if unlearning_method_name == 'icus':
         num_classes = cfg.dataset.classes
         infgt = torch.tensor([1 if i in forgetting_subset else 0 for i in range(len(train))])  
-        unlearning_train = IcusUnlearningDataset(cfg.dataset.name, infgt, model, num_classes, cfg.device)
+        unlearning_train = IcusUnlearningDataset(cfg.dataset.name, cfg.unlearn.nlayers, infgt, model, num_classes, cfg.device)
         unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=10, num_workers=0)
     else:
         unlearning_train = UnlearningDataset(train, forget_indices)

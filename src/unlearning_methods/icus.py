@@ -103,7 +103,7 @@ class Icus(BaseUnlearningMethod):
         self.description = wrapped_train_loader.dataset.descr
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        self.weights=[]
+        self.weights = [None] * len(wrapped_train_loader.dataset)
         for classe, weights, _, _ in wrapped_train_loader:
             for i in range(len(classe)):
                 self.weights[i] = weights[i]
@@ -111,7 +111,8 @@ class Icus(BaseUnlearningMethod):
         #autoencoder
         descr_ae = Autoencoder(opt, flatten_description.shape[1], embed_dim=512, num_layers=2)  
         descr_ae.to(opt.device)
-        weights_ae = Autoencoder(opt, self.weights.shape[1], embed_dim=512, num_layers=2) 
+        input_dim = len(self.weights[0])
+        weights_ae = Autoencoder(opt, input_dim, embed_dim=512, num_layers=2) 
         weights_ae.to(opt.device)
         # Joint Autoencoder
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
@@ -154,11 +155,11 @@ class Icus(BaseUnlearningMethod):
                     weights[i] = torch.randn_like(weights[i], requires_grad=True)
                 elif self.opt.forgetting_set_strategy == "random_class":
                     j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
-                    weights[i][:self.model.fc.weight.data[i].size() + 1] = weights[j][:self.model.fc.weight.data[i].size() + 1]
-                    torch.cat(weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size() + 1:]), 0)
+                    weights[i][:self.model.fc.weight.data[i].size(0) + 1] = weights[j][:self.model.fc.weight.data[i].size(0) + 1]
+                    torch.cat((weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size(0) + 1:])), dim=0)
                 elif self.opt.forgetting_set_strategy == "zeros":
-                    weights[i][:self.model.fc.weight.data[i].size() + 1] = torch.zeros_like(weights[i][:self.model.fc.weight.data[i].size() + 1], requires_grad=True)
-                    torch.cat(weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size() + 1:]), 0)
+                    weights[i][:self.model.fc.weight.data[i].size(0) + 1] = torch.zeros_like(weights[i][:self.model.fc.weight.data[i].size(0) + 1], requires_grad=True)
+                    torch.cat((weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size(0) + 1:])), dim=0)
                 else:
                     raise ValueError("Invalid forgetting set strategy")
             

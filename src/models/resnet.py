@@ -145,7 +145,10 @@ class ResNet18(nn.Module):
 
 
     def get_weights(self, nclasses, nlayers):
-        shared = torch.empty(0)
+        # Initialize `shared` tensor on the same device as the model.
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        shared = torch.empty(0, device=device)
+        
         distinct = []
         for l in nlayers:
             if l == 1:
@@ -155,21 +158,24 @@ class ResNet18(nn.Module):
                     class_weights = torch.cat((w[i], b[i].view(1)), 0)
                     distinct.append(class_weights)
             elif l == 2:
-                shared = torch.cat((shared, self.layer4.conv2.weight.data.view(-1)), 0)
-                shared = torch.cat((shared, self.layer4.bn2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer4.conv2.weight.data.view(-1).to(device)), 0)
+                shared = torch.cat((shared, self.layer4.bn2.weight.data.view(-1).to(device)), 0)
             elif l == 3:
-                shared = torch.cat((shared, self.layer3.conv2.weight.data.view(-1)), 0)
-                shared = torch.cat((shared, self.layer3.bn2.weight.data.view(-1)), 0)
-            elif l==4:
-                shared = torch.cat((shared, self.layer2.conv2.weight.data.view(-1)), 0)
-                shared = torch.cat((shared, self.layer2.bn2.weight.data.view(-1)), 0)
-            elif l==5:
-                shared = torch.cat((shared, self.layer1.conv2.weight.data.view(-1)), 0)
-                shared = torch.cat((shared, self.layer1.bn2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer3.conv2.weight.data.view(-1).to(device)), 0)
+                shared = torch.cat((shared, self.layer3.bn2.weight.data.view(-1).to(device)), 0)
+            elif l == 4:
+                shared = torch.cat((shared, self.layer2.conv2.weight.data.view(-1).to(device)), 0)
+                shared = torch.cat((shared, self.layer2.bn2.weight.data.view(-1).to(device)), 0)
+            elif l == 5:
+                shared = torch.cat((shared, self.layer1.conv2.weight.data.view(-1).to(device)), 0)
+                shared = torch.cat((shared, self.layer1.bn2.weight.data.view(-1).to(device)), 0)
             else:
                 raise ValueError(f'Unknown layer: {l}')
-        distinct = torch.stack(distinct) 
+        
+        distinct = torch.stack([d.to(device) for d in distinct])
+        
         return (distinct, shared)
+
     
 
     def set_weights(self, distinct, shared, nlayers):
