@@ -63,31 +63,43 @@ class ResNet9(nn.Module):
         features = features.view(features.size(0), -1)
         return features
     
-    def get_weights(self, nlayers):
-        weights = {'weights': [], 'bias': []}
+
+    def get_weights(self, nclasses, nlayers):
+        shared = torch.empty(0)
+        distinct = []
         for l in nlayers:
             if l == 1:
                 w = self.fc.weight.data
                 b = self.fc.bias.data
-                weights['weights'].append(w)
-                weights['bias'].append(b)
+                for i in range(nclasses):
+                    class_weights = torch.cat((w[i], b[i].view(1)), 0)
+                    distinct.append(class_weights)
             elif l == 2:
-                pass
+                shared = torch.cat((shared, self.layer2.conv2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer2.bn2.weight.data.view(-1)), 0)
             elif l == 3:
-                pass
+                shared = torch.cat((shared, self.layer1.conv2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer1.bn2.weight.data.view(-1)), 0)
             else:
-                pass
-        return weights
+                raise ValueError(f'Unknown layer: {l}')
+        return (distinct, shared)
 
-    def set_weights(self, weights, nlayers):
+
+    def set_weights(self, distinct, shared, nlayers):
         for l in nlayers:
             if l == 1:
-                self.fc.weight.data = weights['weights'][0]
-                self.fc.bias.data = weights['bias'][0]
+                for i in range(self.opt.dataset.classes):
+                    self.fc.weight.data[i] = distinct[i][:-1]
+                    self.fc.bias.data[i] = distinct[i][-1]
             elif l == 2:
-                pass
+                self.layer2.conv2.weight.data = shared[:self.layer2.conv2.weight.numel()].view(self.layer2.conv2.weight.size())
+                shared = shared[self.layer2.conv2.weight.numel():]
+                self.layer2.bn2.weight.data = shared[:self.layer2.bn2.weight.numel()].view(self.layer2.bn2.weight.size())
+                shared = shared[self.layer2.bn2.weight.numel():]
             elif l == 3:
-                pass
+                self.layer1.conv2.weight.data = shared[:self.layer1.conv2.weight.numel()].view(self.layer1.conv2.weight.size())
+                shared = shared[self.layer1.conv2.weight.numel():]
+                self.layer1.bn2.weight.data = shared[:self.layer1.bn2.weight.numel()].view(self.layer1.bn2.weight.size())
         return
 
 
@@ -130,6 +142,62 @@ class ResNet18(nn.Module):
         features = self.avg_pool(out)
         features = features.view(features.size(0), -1)
         return features
+
+
+    def get_weights(self, nclasses, nlayers):
+        shared = torch.empty(0)
+        distinct = []
+        for l in nlayers:
+            if l == 1:
+                w = self.fc.weight.data
+                b = self.fc.bias.data
+                for i in range(nclasses):
+                    class_weights = torch.cat((w[i], b[i].view(1)), 0)
+                    distinct.append(class_weights)
+            elif l == 2:
+                shared = torch.cat((shared, self.layer4.conv2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer4.bn2.weight.data.view(-1)), 0)
+            elif l == 3:
+                shared = torch.cat((shared, self.layer3.conv2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer3.bn2.weight.data.view(-1)), 0)
+            elif l==4:
+                shared = torch.cat((shared, self.layer2.conv2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer2.bn2.weight.data.view(-1)), 0)
+            elif l==5:
+                shared = torch.cat((shared, self.layer1.conv2.weight.data.view(-1)), 0)
+                shared = torch.cat((shared, self.layer1.bn2.weight.data.view(-1)), 0)
+            else:
+                raise ValueError(f'Unknown layer: {l}')
+        distinct = torch.stack(distinct) 
+        return (distinct, shared)
+    
+
+    def set_weights(self, distinct, shared, nlayers):
+        for l in nlayers:
+            if l == 1:
+                for i in range(self.opt.dataset.classes):
+                    self.fc.weight.data[i] = distinct[i][:-1]
+                    self.fc.bias.data[i] = distinct[i][-1]
+            elif l == 2:
+                self.layer4.conv2.weight.data = shared[:self.layer4.conv2.weight.numel()].view(self.layer4.conv2.weight.size())
+                shared = shared[self.layer4.conv2.weight.numel():]
+                self.layer4.bn2.weight.data = shared[:self.layer4.bn2.weight.numel()].view(self.layer4.bn2.weight.size())
+                shared = shared[self.layer4.bn2.weight.numel():]
+            elif l == 3:
+                self.layer3.conv2.weight.data = shared[:self.layer3.conv2.weight.numel()].view(self.layer3.conv2.weight.size())
+                shared = shared[self.layer3.conv2.weight.numel():]
+                self.layer3.bn2.weight.data = shared[:self.layer3.bn2.weight.numel()].view(self.layer3.bn2.weight.size())
+                shared = shared[self.layer3.bn2.weight.numel():]
+            elif l == 4:
+                self.layer2.conv2.weight.data = shared[:self.layer2.conv2.weight.numel()].view(self.layer2.conv2.weight.size())
+                shared = shared[self.layer2.conv2.weight.numel():]
+                self.layer2.bn2.weight.data = shared[:self.layer2.bn2.weight.numel()].view(self.layer2.bn2.weight.size())
+                shared = shared[self.layer2.bn2.weight.numel():]
+            elif l == 5:
+                self.layer1.conv2.weight.data = shared[:self.layer1.conv2.weight.numel()].view(self.layer1.conv2.weight.size())
+                shared = shared[self.layer1.conv2.weight.numel():]
+                self.layer1.bn2.weight.data = shared[:self.layer1.bn2.weight.numel()].view(self.layer1.bn2.weight.size())
+        return
 
 
 if __name__ == '__main__':

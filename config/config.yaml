@@ -35,6 +35,7 @@ unlearn:
   max_epochs: 100
   temp: 1
   scrub_steps: 6
+  nlayers: [1,2]
 
 train_iters: 999
 

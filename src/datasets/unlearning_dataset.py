@@ -25,7 +25,7 @@ class UnlearningDataset(Dataset):
 
 
 class IcusUnlearningDataset(Dataset):
-    def __init__(self, orig_dataset, infgt, model, num_classes, device="cpu"):
+    def __init__(self, orig_dataset, nlayers, infgt, model, num_classes, device="cpu"):
         """
         IcusUnlearningDataset class.
         Args:
@@ -37,16 +37,7 @@ class IcusUnlearningDataset(Dataset):
         """
         self.classes = torch.arange(0, num_classes)
         self.descr = self.calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
-        self.weights_last, self.bias_last, self.weights_penultimate, self.bias_penultimate=retrieve_weights(model)
-        self.weights_last = self.weights_last.to(device)
-        self.bias_last = self.bias_last.to(device)
-        self.weights_penultimate = self.weights_penultimate.to(device)
-        self.bias_penultimate = self.bias_penultimate.to(device)
-        #TODO POTREBBE ESSER UTILE STAMPARE LA SHAPE DI self.weights_penultimate E self.bias_penultimate
-        self.weights = torch.zeros(num_classes, self.weights_last.shape[1] + 1 + self.weights_penultimate.shape[0] + self.bias_penultimate.shape[0])
-        
-        for i in range(num_classes):
-            self.weights[i] = torch.cat([self.weights_last[i].view(-1), self.bias_last[i].view(-1), self.weights_penultimate.view(-1), self.bias_penultimate.view(-1)], dim=0)
+        self.distinct, self.shared = retrieve_weights(model, num_classes, nlayers)
         self.infgt = infgt  # Tensor dei flag infgt (1 o 0)
         self.device = device
 
@@ -56,7 +47,7 @@ class IcusUnlearningDataset(Dataset):
     def __getitem__(self, idx):
         # Estrai la classe, i pesi, la descrizione e il flag infgt in base all'indice
         classe = self.classes[idx].to(self.device)
-        weigths = self.weights[idx].to(self.device)
+        weigths = torch.cat((self.distinct[idx], self.shared), 0).to(self.device)
         descr = self.descr[idx].to(self.device)
         infgt = self.infgt[idx].to(self.device)
         return classe, weigths, descr, infgt

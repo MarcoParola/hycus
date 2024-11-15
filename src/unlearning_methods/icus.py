@@ -101,10 +101,10 @@ class Icus(BaseUnlearningMethod):
         self.wrapped_train_loader = wrapped_train_loader
         self.logger = logger
         self.description = wrapped_train_loader.dataset.descr
-        self.weights = wrapped_train_loader.dataset.weights
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        for classe, weights, descr, infgt in wrapped_train_loader:
+        self.weights=[]
+        for classe, weights, _, _ in wrapped_train_loader:
             for i in range(len(classe)):
                 self.weights[i] = weights[i]
         self.device = opt.device
@@ -121,7 +121,6 @@ class Icus(BaseUnlearningMethod):
         self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=5e-7)
         
         
-
     def last_layer_weights(self, target):
         return self.fc.weight[target]
 
@@ -130,7 +129,7 @@ class Icus(BaseUnlearningMethod):
 
     
     def unlearn(self, model, unlearning_train, val_loader):
-        self.model.fc.weight.requires_grad_(True)
+        self.model.fc.weight.requires_grad_(True) #INUTILE???
         self.current_step = 0
         for epoch in range(self.opt.unlearn.max_epochs):
             print("Epoch: ", epoch)
@@ -155,9 +154,11 @@ class Icus(BaseUnlearningMethod):
                     weights[i] = torch.randn_like(weights[i], requires_grad=True)
                 elif self.opt.forgetting_set_strategy == "random_class":
                     j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
-                    weights[i] = weights[j]
+                    weights[i][:self.model.fc.weight.data[i].size() + 1] = weights[j][:self.model.fc.weight.data[i].size() + 1]
+                    torch.cat(weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size() + 1:]), 0)
                 elif self.opt.forgetting_set_strategy == "zeros":
-                    weights[i] = torch.zeros_like(weights[i], requires_grad=True)
+                    weights[i][:self.model.fc.weight.data[i].size() + 1] = torch.zeros_like(weights[i][:self.model.fc.weight.data[i].size() + 1], requires_grad=True)
+                    torch.cat(weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size() + 1:]), 0)
                 else:
                     raise ValueError("Invalid forgetting set strategy")
             
@@ -188,41 +189,32 @@ class Icus(BaseUnlearningMethod):
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
         loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + \
                nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) #+ 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))
-        #print("Cosine similarity: ", 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)))
         return loss 
 
 
     def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
-        self.model.eval()
-        self.joint_ae.eval()
-        weights_penultimate = torch.zeros(wrapped_loader.dataset.weights_penultimate.shape[0])
-        bias_penultimate = torch.zeros(wrapped_loader.dataset.bias_penultimate.shape[0])
-        weights_penultimate = weights_penultimate.to(self.opt.device)
-        bias_penultimate = bias_penultimate.to(self.opt.device)
+        self.model.eval()  # Imposta il modello in modalità di valutazione
+        self.joint_ae.eval()  # Imposta l'autoencoder in modalità di valutazione
+        distinct = []
+        shared = None 
         for i in range(self.opt.dataset.classes):
-            _,w,d,_ = wrapped_loader.dataset[i]
+            _, w, d, _ = wrapped_loader.dataset[i]
             d = d.view(-1)
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
-            w = w.to(self.opt.device)
             w = self.joint_ae.ae_w.decode(latent_w)
-            weights_last = w[:wrapped_loader.dataset.weights_last.shape[1]]
-            bias_last = w[wrapped_loader.dataset.weights_last.shape[1]+1]
-            if i not in forgetting_subset:
-                weights_penultimate += w[wrapped_loader.dataset.weights_last.shape[1]+1:wrapped_loader.dataset.weights_last.shape[1]+1+wrapped_loader.dataset.weights_penultimate.shape[0]]
-                bias_penultimate += w[wrapped_loader.dataset.weights_last.shape[1]+1+wrapped_loader.dataset.weights_penultimate.shape[0]:]
-            with torch.no_grad():
-                self.model.fc.weight[i] = weights_last
-                self.model.fc.bias[i] = bias_last
-        weights_penultimate /= (self.opt.dataset.classes-len(forgetting_subset))
-        bias_penultimate /= (self.opt.dataset.classes-len(forgetting_subset))
-        with torch.no_grad():
-            weights_penultimate = weights_penultimate.view(128, 128, 3, 3)
-            self.model.layer2.conv2.weight.data = weights_penultimate
-            self.model.layer2.bn2.bias.data = bias_penultimate 
-
-        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset) 
+            distinct.append(w[:self.model.fc.weight.size(1) + 1])
+            shared_part = w[self.model.fc.weight.size(1) + 1:]
+            if shared is None:
+                shared = shared_part.clone()
+            else:
+                shared += shared_part
+        shared = shared / len(self.opt.dataset.classes)
+        distinct = torch.stack(distinct).to(self.opt.device)
+        shared = shared.to(self.opt.device)
+        self.model.set_weights(distinct, shared, self.opt.unlearn.nlayers)
+        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
+        # Log delle metriche
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
-        

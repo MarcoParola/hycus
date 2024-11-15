@@ -171,7 +171,10 @@ def plot_features_3d(model, data_loader, forgetting_subset, unlearned=False):
 
     # PCA transformation to 3D
     pca = PCA(n_components=3)
-    X_pca = pca.fit_transform(features_np)
+    if not unlearned:
+        X_pca = pca.fit_transform(features_np)
+    else:
+        X_pca = pca.transform(features_np)
 
     # t-SNE transformation to 3D
     tsne = TSNE(n_components=3, perplexity=30, random_state=42)
@@ -248,23 +251,19 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
     features_np = torch.cat(all_features).numpy()
     labels_np = torch.cat(all_labels).numpy()
 
-    # PCA transformation to 3 components
     pca = PCA(n_components=3)
-    X_pca = pca.fit_transform(features_np)
-
-    # t-SNE transformation to 3 components
+    if not unlearned:
+        X_pca = pca.fit_transform(features_np)  
+    else:
+        X_pca = pca.transform(features_np)  
+    
     tsne = TSNE(n_components=3, perplexity=30, random_state=42)
-    X_tsne = tsne.fit_transform(features_np)
-
-    # Plotting PCA and t-SNE for combinations of components
+    X_tsne = tsne.fit_transform(features_np)  
     plt.figure(figsize=(18, 12))
+    component_pairs = [(0, 1), (0, 2), (1, 2)]  
 
-    # Define the component pairs to plot
-    component_pairs = [(0, 1), (0, 2), (1, 2)]  # (1, 2), (1, 3), (2, 3)
-
-    # Plot PCA for each combination of components
     for i, (x_comp, y_comp) in enumerate(component_pairs, start=1):
-        ax = plt.subplot(2, 3, i)  # Create a subplot for each plot
+        ax = plt.subplot(2, 3, i)  
         for classe in np.unique(labels_np):
             if classe in forgetting_subset:
                 indices = np.where(labels_np == classe)
@@ -278,9 +277,8 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
         ax.grid(True)
         ax.legend(loc='best')
 
-    # Plot t-SNE for each combination of components
     for i, (x_comp, y_comp) in enumerate(component_pairs, start=4):
-        ax = plt.subplot(2, 3, i)  # Create a subplot for each plot
+        ax = plt.subplot(2, 3, i)  
         for classe in np.unique(labels_np):
             if classe in forgetting_subset:
                 indices = np.where(labels_np == classe)
@@ -294,7 +292,6 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
         ax.grid(True)
         ax.legend(loc='best')
 
-    # Save the plot with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
         plt.savefig('fig/feature_plot_2d_unlearned_'+timestamp+'.png')
