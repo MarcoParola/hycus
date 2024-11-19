@@ -47,7 +47,10 @@ class IcusUnlearningDataset(Dataset):
     def __getitem__(self, idx):
         # Estrai la classe, i pesi, la descrizione e il flag infgt in base all'indice
         classe = self.classes[idx].to(self.device)
-        weigths = torch.cat((self.distinct[idx], self.shared), 0).to(self.device)
+        if len(self.distinct) == 0:
+            weigths = self.shared.to(self.device)
+        else:
+            weigths = torch.cat((self.distinct[idx], self.shared), 0).to(self.device)
         descr = self.descr[idx].to(self.device)
         infgt = self.infgt[idx].to(self.device)
         return classe, weigths, descr, infgt

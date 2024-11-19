@@ -97,29 +97,36 @@ class Icus(BaseUnlearningMethod):
     def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger=None):
         super().__init__(opt, model)
         self.fc = model.fc
+        self.opt=opt
         self.orig_model = copy.deepcopy(self.model)
         self.wrapped_train_loader = wrapped_train_loader
         self.logger = logger
         self.description = wrapped_train_loader.dataset.descr
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        self.weights = [None] * len(wrapped_train_loader.dataset)
+        self.weights = []
+        self.orig_weights = []
+        #self.weights = [None] * self.opt.dataset.classes
+        j=0
         for classe, weights, _, _ in wrapped_train_loader:
             for i in range(len(classe)):
-                self.weights[i] = weights[i]
+                #self.weights[j] = weights
+                self.weights.append(weights)
+                j+=1
+        self.orig_weights = copy.deepcopy(self.weights)
         self.device = opt.device
         #autoencoder
         descr_ae = Autoencoder(opt, flatten_description.shape[1], embed_dim=512, num_layers=2)  
         descr_ae.to(opt.device)
-        input_dim = len(self.weights[0])
+        input_dim = weights.size(1)
         weights_ae = Autoencoder(opt, input_dim, embed_dim=512, num_layers=2) 
         weights_ae.to(opt.device)
         # Joint Autoencoder
         self.joint_ae = JointAutoencoder(descr_ae, weights_ae, self.opt.device)
         self.current_step = 0
         # Autoencoder optimizers
-        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=5e-7)
-        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=5e-7)
+        self.descr_optimizer = optim.Adam(self.joint_ae.ae_d.parameters(), lr=opt.unlearn.lr)
+        self.weights_optimizer = optim.Adam(self.joint_ae.ae_w.parameters(), lr=opt.unlearn.lr)
         
         
     def last_layer_weights(self, target):
@@ -146,20 +153,26 @@ class Icus(BaseUnlearningMethod):
         running_loss = 0.0
 
         for batch in unlearning_train:
-            targets, weights, descr, infgt = batch
-            weights, descr, infgt, targets = weights.to(self.device), descr.to(self.device), infgt.to(self.device), targets.to(self.device)
+            targets, weights, descr, _ = batch
+            weights, descr, targets = weights.to(self.device), descr.to(self.device), targets.to(self.device)
+            
             descr = descr.view(descr.size(0), -1)
             # Update the weights of the model
             for i in self.forgetting_subset:
                 if self.opt.forgetting_set_strategy == "random_values":
-                    weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                    if targets == i:
+                        weights[i] = torch.randn_like(weights[i], requires_grad=True)
                 elif self.opt.forgetting_set_strategy == "random_class":
-                    j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
-                    weights[i][:self.model.fc.weight.data[i].size(0) + 1] = weights[j][:self.model.fc.weight.data[i].size(0) + 1]
-                    torch.cat((weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size(0) + 1:])), dim=0)
+                    if 1 not in self.opt.unlearn.nlayers:
+                        weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                    else:
+                        j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
+                        weights[i][:self.model.fc.weight.data[i].size(0) + 1] = weights[j][:self.model.fc.weight.data[i].size(0) + 1]
+                        torch.cat((weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size(0) + 1:])), dim=0)
                 elif self.opt.forgetting_set_strategy == "zeros":
-                    weights[i][:self.model.fc.weight.data[i].size(0) + 1] = torch.zeros_like(weights[i][:self.model.fc.weight.data[i].size(0) + 1], requires_grad=True)
-                    torch.cat((weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size(0) + 1:])), dim=0)
+                    if targets == i:
+                        weights[i][:self.model.fc.weight.data[i].size(0) + 1] = torch.zeros_like(weights[i][:self.model.fc.weight.data[i].size(0) + 1], requires_grad=True)
+                        torch.cat((weights[i], torch.randn_like(weights[i][self.model.fc.weight.data[i].size(0) + 1:])), dim=0)
                 else:
                     raise ValueError("Invalid forgetting set strategy")
             
@@ -176,7 +189,7 @@ class Icus(BaseUnlearningMethod):
             self.descr_optimizer.zero_grad()
             self.weights_optimizer.zero_grad()
 
-            loss.backward(retain_graph=True)  # Backpropagation
+            loss.backward()
             self.descr_optimizer.step()  # Update autoencoder
             self.weights_optimizer.step() 
 
@@ -189,7 +202,7 @@ class Icus(BaseUnlearningMethod):
 
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
         loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + \
-               nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) #+ 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))
+               nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) + self.opt.unlearn.cos_sim_factor * (1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)))
         return loss 
 
 
@@ -204,16 +217,21 @@ class Icus(BaseUnlearningMethod):
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
             w = self.joint_ae.ae_w.decode(latent_w)
-            distinct.append(w[:self.model.fc.weight.size(1) + 1])
-            shared_part = w[self.model.fc.weight.size(1) + 1:]
+            if 1 in self.opt.unlearn.nlayers:
+                distinct.append(w[:self.model.fc.weight.size(1) + 1])
+                shared_part = w[self.model.fc.weight.size(1) + 1:]
+            else:
+                shared_part = w
             if shared is None:
                 shared = shared_part.clone()
             else:
                 shared += shared_part
-        shared = shared / len(self.opt.dataset.classes)
-        distinct = torch.stack(distinct).to(self.opt.device)
+        shared = shared / self.opt.dataset.classes 
+        if distinct != []:
+            distinct = torch.stack(distinct).to(self.opt.device)
         shared = shared.to(self.opt.device)
-        self.model.set_weights(distinct, shared, self.opt.unlearn.nlayers)
+        nlayers = self.opt.unlearn.nlayers
+        self.model.set_weights(distinct, shared, nlayers)
         metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
         # Log delle metriche
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})

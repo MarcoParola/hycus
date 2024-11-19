@@ -149,7 +149,7 @@ def plot_features_3d(model, data_loader, forgetting_subset, unlearned=False):
     plt.show()
 """
 
-def plot_features_3d(model, data_loader, forgetting_subset, unlearned=False): 
+def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=False): 
     model.eval()  
 
     all_features = []
@@ -170,8 +170,8 @@ def plot_features_3d(model, data_loader, forgetting_subset, unlearned=False):
     labels_np = torch.cat(all_labels).numpy()
 
     # PCA transformation to 3D
-    pca = PCA(n_components=3)
     if not unlearned:
+        pca = PCA(n_components=3)
         X_pca = pca.fit_transform(features_np)
     else:
         X_pca = pca.transform(features_np)
@@ -229,9 +229,11 @@ def plot_features_3d(model, data_loader, forgetting_subset, unlearned=False):
     
     # Show the plot
     plt.show()
+    if not unlearned:
+        return pca
 
 
-def plot_features(model, data_loader, forgetting_subset, unlearned=False): 
+def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=False): 
     model.eval()  
 
     all_features = []
@@ -251,8 +253,8 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
     features_np = torch.cat(all_features).numpy()
     labels_np = torch.cat(all_labels).numpy()
 
-    pca = PCA(n_components=3)
     if not unlearned:
+        pca = PCA(n_components=3)
         X_pca = pca.fit_transform(features_np)  
     else:
         X_pca = pca.transform(features_np)  
@@ -298,3 +300,6 @@ def plot_features(model, data_loader, forgetting_subset, unlearned=False):
     else:
         plt.savefig('fig/feature_plot_2d_'+timestamp+'.png')
     plt.show()
+
+    if not unlearned:
+        return pca
