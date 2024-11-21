@@ -32,9 +32,11 @@ train:
 
 unlearn:
   lr: 1e-4
-  max_epochs: 100
+  max_epochs: 300
   temp: 1
   scrub_steps: 6
+  nlayers: [1,2]
+  cos_sim_factor: 0.0
 
 train_iters: 999
 
@@ -45,6 +47,4 @@ log:
 wandb:
   project: icus
   entity: fedefrati-universit-di-pisa
-
-
 

@@ -63,9 +63,9 @@ def main(cfg):
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
-    # Plot PCA
-    plot_features(model, test_loader, forgetting_subset, False)
-    plot_features_3d(model, test_loader, forgetting_subset, False)
+    # Plotting
+    pca=plot_features(model, test_loader, forgetting_subset)
+    pca=plot_features_3d(model, test_loader, forgetting_subset)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -91,8 +91,8 @@ def main(cfg):
     elif unlearning_method_name == 'ssd':
         new_model = unlearning_method.unlearn() # TODO
     
-    plot_features(new_model, test_loader, forgetting_subset, True) 
-    #plot_features_3d(new_model, test_loader, forgetting_subset, True)
+    plot_features(new_model, test_loader, forgetting_subset, pca, True) 
+    plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
    
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)

@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 import random
-from src.utils import retrieve_weights
+#from src.utils import retrieve_weights
+import requests
 from transformers import BertModel, BertTokenizer
 
 class UnlearningDataset(Dataset):
@@ -25,7 +26,7 @@ class UnlearningDataset(Dataset):
 
 
 class IcusUnlearningDataset(Dataset):
-    def __init__(self, orig_dataset, infgt, model, num_classes, device="cpu"):
+    def __init__(self, orig_dataset, nlayers, infgt, model, num_classes, device="cpu"):
         """
         IcusUnlearningDataset class.
         Args:
@@ -37,16 +38,7 @@ class IcusUnlearningDataset(Dataset):
         """
         self.classes = torch.arange(0, num_classes)
         self.descr = self.calculate_embeddings(orig_dataset)  # Tensor delle descrizioni
-        self.weights_last, self.bias_last, self.weights_penultimate, self.bias_penultimate=retrieve_weights(model)
-        self.weights_last = self.weights_last.to(device)
-        self.bias_last = self.bias_last.to(device)
-        self.weights_penultimate = self.weights_penultimate.to(device)
-        self.bias_penultimate = self.bias_penultimate.to(device)
-        #TODO POTREBBE ESSER UTILE STAMPARE LA SHAPE DI self.weights_penultimate E self.bias_penultimate
-        self.weights = torch.zeros(num_classes, self.weights_last.shape[1] + 1 + self.weights_penultimate.shape[0] + self.bias_penultimate.shape[0])
-        
-        for i in range(num_classes):
-            self.weights[i] = torch.cat([self.weights_last[i].view(-1), self.bias_last[i].view(-1), self.weights_penultimate.view(-1), self.bias_penultimate.view(-1)], dim=0)
+        self.distinct, self.shared = model.get_weights(num_classes, nlayers)  # Tensor dei pesi distinti e condivisi
         self.infgt = infgt  # Tensor dei flag infgt (1 o 0)
         self.device = device
 
@@ -56,7 +48,10 @@ class IcusUnlearningDataset(Dataset):
     def __getitem__(self, idx):
         # Estrai la classe, i pesi, la descrizione e il flag infgt in base all'indice
         classe = self.classes[idx].to(self.device)
-        weigths = self.weights[idx].to(self.device)
+        if len(self.distinct) == 0:
+            weigths = self.shared.to(self.device)
+        else:
+            weigths = torch.cat((self.distinct[idx], self.shared), 0).to(self.device)
         descr = self.descr[idx].to(self.device)
         infgt = self.infgt[idx].to(self.device)
         return classe, weigths, descr, infgt
@@ -70,10 +65,15 @@ class IcusUnlearningDataset(Dataset):
         if dataset_name=='cifar10':
             path = "data/"+dataset_name+"_classes.txt"
             classes = load_words_to_array(path)
+        
+        description=[]
+        for y in classes:
+            y = get_wikipedia_description(y)
+            description.append(y)
             
         # Tokenize the list of words all together
         encoding = tokenizer.batch_encode_plus(
-            classes,
+            description,
             padding=True,
             truncation=True,
             return_tensors='pt',
@@ -95,14 +95,46 @@ def load_words_to_array(file_path):
     with open(file_path, 'r') as f:
         # Rimuovi eventuali spazi bianchi e newline, e crea una lista di parole
         words = [line.strip() for line in f if line.strip()]
-    return words    
+    return words
+
+
+
+#function to retrieve a description from wikipedia given a name
+def get_wikipedia_description(name, language="en"):
+    url = f"https://{language}.wikipedia.org/w/api.php"
+    params = {
+        "action": "query",
+        "format": "json",
+        "titles": name,
+        "prop": "extracts",
+        "exintro": True,
+        "explaintext": True,
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # Check for HTTP request errors
+        data = response.json()
+        pages = data.get("query", {}).get("pages", {})
+        page = next(iter(pages.values()))  # Get the first (and usually only) page
+        
+        if "extract" in page:
+            return page["extract"]
+        elif "missing" in page:
+            return f"No Wikipedia page found for '{name}'."
+        else:
+            return "Unexpected error occurred."
+    except requests.RequestException as e:
+        return f"An error occurred while accessing the Wikipedia API: {e}"
+
+    
 
 
 def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset): 
     if unlearning_method_name == 'icus':
         num_classes = cfg.dataset.classes
         infgt = torch.tensor([1 if i in forgetting_subset else 0 for i in range(len(train))])  
-        unlearning_train = IcusUnlearningDataset(cfg.dataset.name, infgt, model, num_classes, cfg.device)
+        unlearning_train = IcusUnlearningDataset(cfg.dataset.name, cfg.unlearn.nlayers, infgt, model, num_classes, cfg.device)
         unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=10, num_workers=0)
     else:
         unlearning_train = UnlearningDataset(train, forget_indices)
@@ -110,4 +142,8 @@ def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_ind
     return unlearning_train
 
 
-    
+description = []
+x=load_words_to_array("data/cifar10_classes.txt")
+for y in x:
+    y = get_wikipedia_description(y)
+    description.append(y)

@@ -235,7 +235,7 @@ def retrieve_weights(model):
     bias_last = model.fc.bias.data
 
     # Pesi del penultimo layer (ultimo blocco residuo di layer2)
-    weights_penultimate = model.layer2.conv2.weight.data.view(-1)
+    weights_penultimate = model.layer2.conv2.weight.data.view(-1) #128*128*3*3
     bias_penultimate = model.layer2.bn2.bias.data.view(-1)
 
     return weights_last, bias_last, weights_penultimate, bias_penultimate
