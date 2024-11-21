@@ -7,6 +7,7 @@ currentDir: ${hydra:runtime.cwd}
 seed: -1
 
 model: resnet
+weights_name: ResNet18_Weights.IMAGENET1K_V1
 unlearning_method: icus
 forgetting_set_strategy: random_class
 forgetting_set: random
@@ -23,8 +24,8 @@ SSDdampening: 0.5
 SSDselectwt: 0.1
 
 train:
-  batch_size: 32
-  max_epochs: 100
+  batch_size: 64
+  max_epochs: 2
   lr: 1e-3
   save_path: checkpoints/
   num_workers: 1
@@ -46,5 +47,5 @@ log:
 
 wandb:
   project: icus
-  entity: fedefrati-universit-di-pisa
+  entity: marcoparola
 
