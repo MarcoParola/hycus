@@ -64,7 +64,7 @@ def main(cfg):
         print(f'{k}: {v}')
 
     # Plotting
-    #pca=plot_features(model, test_loader, forgetting_subset)
+    pca=plot_features(model, test_loader, forgetting_subset)
     pca=plot_features_3d(model, test_loader, forgetting_subset)
     
     #prepare datasets for unlearning
@@ -91,7 +91,7 @@ def main(cfg):
     elif unlearning_method_name == 'ssd':
         new_model = unlearning_method.unlearn() # TODO
     
-    #plot_features(new_model, test_loader, forgetting_subset, pca, True) 
+    plot_features(new_model, test_loader, forgetting_subset, pca, True) 
     plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
    
     

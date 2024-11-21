@@ -202,7 +202,10 @@ class Icus(BaseUnlearningMethod):
 
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
         loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + \
-               nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) + self.opt.unlearn.cos_sim_factor * (1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)))
+               nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) + \
+               self.opt.unlearn.cos_sim_factor * (1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))) 
+               #+self.opt.unlearn.latent_reg_factor * nn.MSELoss()(latent_att, latent_weight)
+
         return loss 
 
 
@@ -216,8 +219,8 @@ class Icus(BaseUnlearningMethod):
             d = d.view(-1)
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
-            w = self.joint_ae.ae_w.decode(latent_w)
-            if 1 in self.opt.unlearn.nlayers:
+            w = self.joint_ae.ae_w.decode(latent_d)
+            if 1 in self.opt.unlearn.nlayers: 
                 distinct.append(w[:self.model.fc.weight.size(1) + 1])
                 shared_part = w[self.model.fc.weight.size(1) + 1:]
             else:

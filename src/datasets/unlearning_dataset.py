@@ -1,7 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 import random
-from src.utils import retrieve_weights
+#from src.utils import retrieve_weights
+import requests
 from transformers import BertModel, BertTokenizer
 
 class UnlearningDataset(Dataset):
@@ -64,10 +65,15 @@ class IcusUnlearningDataset(Dataset):
         if dataset_name=='cifar10':
             path = "data/"+dataset_name+"_classes.txt"
             classes = load_words_to_array(path)
+        
+        description=[]
+        for y in classes:
+            y = get_wikipedia_description(y)
+            description.append(y)
             
         # Tokenize the list of words all together
         encoding = tokenizer.batch_encode_plus(
-            classes,
+            description,
             padding=True,
             truncation=True,
             return_tensors='pt',
@@ -89,7 +95,39 @@ def load_words_to_array(file_path):
     with open(file_path, 'r') as f:
         # Rimuovi eventuali spazi bianchi e newline, e crea una lista di parole
         words = [line.strip() for line in f if line.strip()]
-    return words    
+    return words
+
+
+
+#function to retrieve a description from wikipedia given a name
+def get_wikipedia_description(name, language="en"):
+    url = f"https://{language}.wikipedia.org/w/api.php"
+    params = {
+        "action": "query",
+        "format": "json",
+        "titles": name,
+        "prop": "extracts",
+        "exintro": True,
+        "explaintext": True,
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        response.raise_for_status()  # Check for HTTP request errors
+        data = response.json()
+        pages = data.get("query", {}).get("pages", {})
+        page = next(iter(pages.values()))  # Get the first (and usually only) page
+        
+        if "extract" in page:
+            return page["extract"]
+        elif "missing" in page:
+            return f"No Wikipedia page found for '{name}'."
+        else:
+            return "Unexpected error occurred."
+    except requests.RequestException as e:
+        return f"An error occurred while accessing the Wikipedia API: {e}"
+
+    
 
 
 def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset): 
@@ -104,4 +142,8 @@ def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_ind
     return unlearning_train
 
 
-    
+description = []
+x=load_words_to_array("data/cifar10_classes.txt")
+for y in x:
+    y = get_wikipedia_description(y)
+    description.append(y)
