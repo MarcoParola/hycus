@@ -32,7 +32,7 @@ train:
 
 unlearn:
   lr: 1e-4
-  max_epochs: 300
+  max_epochs: 1000
   temp: 1
   scrub_steps: 6
   nlayers: [1,2]
