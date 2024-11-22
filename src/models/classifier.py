@@ -74,20 +74,31 @@ class Classifier(torch.nn.Module):
             )
 
     def get_weights(self, nclasses, nlayers):
-        pass
+        
+        if self.model_name == 'resnet18':
+            pass
+        elif self.model_name == 'efficientnet_b0':
+            pass
+
+        return
 
     def set_weights(self, distinct, shared, nlayers):
-        pass
+        if self.model_name == 'resnet18':
+            pass
+        elif self.model_name == 'efficientnet_b0':
+            pass
 
 if __name__ == '__main__':
 
     model_list = [
-        'ResNet50_Weights.IMAGENET1K_V1',
-        'EfficientNet_B1_Weights.IMAGENET1K_V1',
-        'VGG16_Weights.IMAGENET1K_V1',
-        'DenseNet121_Weights.IMAGENET1K_V1',
-        'ResNet152_Weights.IMAGENET1K_V2',
-        'EfficientNet_B1_Weights.IMAGENET1K_V1',
+        # 'ResNet50_Weights.IMAGENET1K_V1',
+        # 'EfficientNet_B1_Weights.IMAGENET1K_V1',
+        # 'VGG16_Weights.IMAGENET1K_V1',
+        # 'DenseNet121_Weights.IMAGENET1K_V1',
+        # 'ResNet152_Weights.IMAGENET1K_V2',
+        # 'EfficientNet_B1_Weights.IMAGENET1K_V1',
+        'ResNet18_Weights.IMAGENET1K_V1',
+        'EfficientNet_B0_Weights.IMAGENET1K_V1'
     ]
 
     img = torch.randn(2, 3, 256, 256)
@@ -95,4 +106,4 @@ if __name__ == '__main__':
     for model_name in model_list:
         print(model_name)
         model = Classifier(model_name, 10)
-        print(model(img).shape)
+        print(model.model_name, model(img).shape)
