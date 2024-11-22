@@ -219,7 +219,7 @@ class Icus(BaseUnlearningMethod):
             d = d.view(-1)
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
-            w = self.joint_ae.ae_w.decode(latent_d)
+            w = self.joint_ae.ae_w.decode(latent_w)
             if 1 in self.opt.unlearn.nlayers: 
                 distinct.append(w[:self.model.fc.weight.size(1) + 1])
                 shared_part = w[self.model.fc.weight.size(1) + 1:]

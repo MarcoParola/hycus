@@ -228,8 +228,8 @@ def ssd_tuning(
         "min_layer": -1,
         "max_layer": -1,
         "forget_threshold": 1,
-        "dampening_constant": 0.1,
-        "selection_weighting": 10,
+        "dampening_constant": dampening_constant,
+        "selection_weighting": selection_weighting,
     }
 
     # load the trained model
