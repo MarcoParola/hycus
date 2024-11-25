@@ -13,12 +13,9 @@ from src.models.classifier import Classifier
 @hydra.main(config_path='../config', config_name='config')
 def main(cfg):
     model = Classifier(
-        weights=cfg.weights_name,
-        num_classes=cfg[cfg.dataset.name].n_classes,
-        lr=cfg.train.lr,
-        max_epochs=cfg.train.max_epochs,
-        finetune=True
-    )
+        cfg.weights_name, 
+        num_classes=cfg[cfg.dataset.name].n_classes, 
+        finetune=True)
 
     for name, module in model.named_modules():
         print(name)
