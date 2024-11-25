@@ -210,8 +210,8 @@ class Icus(BaseUnlearningMethod):
 
 
     def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
-        self.model.eval()  # Imposta il modello in modalità di valutazione
-        self.joint_ae.eval()  # Imposta l'autoencoder in modalità di valutazione
+        self.model.eval()  # Set model in evaluation mode
+        self.joint_ae.eval()  # Set autoencoder in evaluation mode
         distinct = []
         shared = None 
         for i in range(self.opt.dataset.classes):

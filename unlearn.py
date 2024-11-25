@@ -93,7 +93,9 @@ def main(cfg):
     
     plot_features(model, test_loader, forgetting_subset, pca=pca, unlearned=True, shared_limits=shared_limits)
     #plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
-   
+    
+    os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
+    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
