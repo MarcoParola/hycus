@@ -6,9 +6,8 @@ from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
 
-#from src.utils import get_early_stopping, get_save_model_callback
-from src.models.resnet import ResNet9, ResNet18, ResidualBlock, ResNetCustom
 from src.datasets.dataset import load_dataset
+from src.models.classifier import Classifier
 from src.log import get_loggers
 from omegaconf import OmegaConf
 
@@ -34,7 +33,7 @@ def main(cfg):
 
     # TODO use load_model function defined in src/models/model.py
     # remember to fix that function
-    model = ResNetCustom(ResidualBlock, num_classes=cfg[cfg.dataset.name].n_classes)
+    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
@@ -108,5 +107,6 @@ def main(cfg):
             
 
 if __name__ == '__main__':
+    print('main')
     main()
 
