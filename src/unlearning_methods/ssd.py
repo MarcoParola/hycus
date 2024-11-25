@@ -18,10 +18,10 @@ class SSD(BaseUnlearningMethod):
         self.opt.train_iters = len(wrapped_train_loader) + len(forget_loader)
         time_start = time.process_time()
         # Call the SSD tuning method to modify the model
-        self.best_model = ssd_tuning(self.model, forget_loader, self.opt.SSDdampening, self.opt.SSDselectwt, wrapped_train_loader, self.opt.device)
+        self.best_model = ssd_tuning(self.model, forget_loader, self.opt.unlearn.SSDdampening, self.opt.unlearn.SSDselectwt, wrapped_train_loader, self.opt.device)
         self.save_files['train_time_taken'] += time.process_time() - time_start
         self.opt.train_iters = actual_iters
-        return
+        return self.best_model
 
     def get_save_prefix(self):
         self.unlearn_file_prefix = f"{self.opt.pretrain_file_prefix}/{self.opt.deletion_size}_{self.opt.unlearn_method}_{self.opt.exp_name}"

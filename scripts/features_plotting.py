@@ -233,7 +233,7 @@ def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=
         return pca
 
 
-def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=False): 
+def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=False, shared_limits=None): 
     model.eval()  
 
     all_features = []
@@ -261,6 +261,13 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
     
     tsne = TSNE(n_components=3, perplexity=30, random_state=42)
     X_tsne = tsne.fit_transform(features_np)  
+    
+    if shared_limits is None:
+        shared_limits = {"pca": {}, "tsne": {}}
+        for i in range(3):  # Per PCA e t-SNE
+            shared_limits["pca"][i] = (np.min(X_pca[:, i]), np.max(X_pca[:, i]))
+            shared_limits["tsne"][i] = (np.min(X_tsne[:, i]), np.max(X_tsne[:, i]))
+    
     plt.figure(figsize=(18, 12))
     component_pairs = [(0, 1), (0, 2), (1, 2)]  
 
@@ -278,6 +285,9 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
         ax.set_title(f'PCA: Component {x_comp + 1} vs Component {y_comp + 1}')
         ax.grid(True)
         ax.legend(loc='best')
+        # Imposta i limiti PCA
+        ax.set_xlim(shared_limits["pca"][x_comp])
+        ax.set_ylim(shared_limits["pca"][y_comp])
 
     for i, (x_comp, y_comp) in enumerate(component_pairs, start=4):
         ax = plt.subplot(2, 3, i)  
@@ -293,6 +303,9 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
         ax.set_title(f't-SNE: Component {x_comp + 1} vs Component {y_comp + 1}')
         ax.grid(True)
         ax.legend(loc='best')
+        # Imposta i limiti t-SNE
+        ax.set_xlim(shared_limits["tsne"][x_comp])
+        ax.set_ylim(shared_limits["tsne"][y_comp])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
@@ -302,4 +315,6 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
     plt.show()
 
     if not unlearned:
-        return pca
+        return pca, shared_limits
+    else:
+        return None
