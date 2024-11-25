@@ -20,8 +20,6 @@ dataset:
   resize: 224
 
 device: "cuda"
-SSDdampening: 0.5
-SSDselectwt: 0.1
 
 train:
   batch_size: 128
@@ -33,11 +31,13 @@ train:
 
 unlearn:
   lr: 1e-4
-  max_epochs: 300
+  max_epochs: 1000
   temp: 1
-  scrub_steps: 6
+  scrub_steps: 7
   nlayers: [1,2]
   cos_sim_factor: 0.0
+  SSDdampening: 0.5
+  SSDselectwt: 0.1
 
 train_iters: 999
 

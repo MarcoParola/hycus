@@ -113,7 +113,7 @@ class ParameterPerturber:
             ]
         )
 
-    def calc_importance(self, dataloader: DataLoader) -> Dict[str, torch.Tensor]:
+    def calc_importance(self, dataloader: DataLoader, forget=True) -> Dict[str, torch.Tensor]:
         """
         Adapated from: Avalanche: an End-to-End Library for Continual Learning - https://github.com/ContinualAI/avalanche
         Calculate per-parameter, importance
@@ -125,19 +125,35 @@ class ParameterPerturber:
         """
         criterion = nn.CrossEntropyLoss()
         importances = self.zerolike_params_dict(self.model)
-        for (x, y, idx) in tqdm.tqdm(dataloader):
-            x, y = x.to(self.device), y.to(self.device)
-            self.opt.zero_grad()
-            
-            out = self.model(x)
-            loss = criterion(out, y)
-            loss.backward()
+        if forget==False:
+            for (x, y, _) in tqdm.tqdm(dataloader):
+                x, y = x.to(self.device), y.to(self.device)
+                self.opt.zero_grad()
+                
+                out = self.model(x)
+                loss = criterion(out, y)
+                loss.backward()
 
-            for (k1, p), (k2, imp) in zip(
-                self.model.named_parameters(), importances.items()
-            ):
-                if p.grad is not None:
-                    imp.data += p.grad.data.clone().pow(2)
+                for (k1, p), (k2, imp) in zip(
+                    self.model.named_parameters(), importances.items()
+                ):
+                    if p.grad is not None:
+                        imp.data += p.grad.data.clone().pow(2)
+        else:
+            for (x, y) in tqdm.tqdm(dataloader):
+                x, y = x.to(self.device), y.to(self.device)
+                self.opt.zero_grad()
+                
+                out = self.model(x)
+                loss = criterion(out, y)
+                loss.backward()
+
+                for (k1, p), (k2, imp) in zip(
+                    self.model.named_parameters(), importances.items()
+                ):
+                    if p.grad is not None:
+                        imp.data += p.grad.data.clone().pow(2)
+
 
         # average over mini batch length
         for _, imp in importances.items():
@@ -222,9 +238,9 @@ def ssd_tuning(
     pdr = ParameterPerturber(model, optimizer, device, parameters)
     model = model.eval()
 
-    sample_importances = pdr.calc_importance(forget_train_dl)
+    sample_importances = pdr.calc_importance(forget_train_dl, forget=True)
 
-    original_importances = pdr.calc_importance(full_train_dl)
+    original_importances = pdr.calc_importance(full_train_dl, forget=False)
     pdr.modify_weight(original_importances, sample_importances)
     return model
  

@@ -69,8 +69,8 @@ def main(cfg):
 
     '''
     # Plotting
-    pca=plot_features(model, test_loader, forgetting_subset)
-    pca=plot_features_3d(model, test_loader, forgetting_subset)
+    pca, shared_limits = plot_features(model, test_loader, forgetting_subset, unlearned=False)
+    #pca=plot_features_3d(model, test_loader, forgetting_subset)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -94,11 +94,13 @@ def main(cfg):
     elif unlearning_method_name == 'badT':
         new_model = unlearning_method.unlearn(unlearning_train, test_loader, val_loader) 
     elif unlearning_method_name == 'ssd':
-        new_model = unlearning_method.unlearn() # TODO
+        new_model = unlearning_method.unlearn(unlearning_train, test_loader, forget_loader) 
     
-    plot_features(new_model, test_loader, forgetting_subset, pca, True) 
-    plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
-   
+    plot_features(model, test_loader, forgetting_subset, pca=pca, unlearned=True, shared_limits=shared_limits)
+    #plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
+    
+    os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
+    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
