@@ -36,7 +36,7 @@ def get_forgetting_subset(forgetting_set, n_classes, forgetting_set_size):
     if forgetting_set == 'random':
         print('Random forgetting set')
         # return random values using torch
-        return torch.randint(0, n_classes, (forgetting_set_size,)).tolist()
+        return torch.randperm(n_classes)[:forgetting_set_size].tolist()
     elif isinstance(forgetting_set, omegaconf.listconfig.ListConfig):
         forgetting_set = list(forgetting_set)
         return forgetting_set

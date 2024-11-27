@@ -73,20 +73,129 @@ class Classifier(torch.nn.Module):
                 torch.nn.AvgPool2d(kernel_size=13, stride=1, padding=0)
             )
 
-    def get_weights(self, nclasses, nlayers):
-        
+    def extract_features(self, x):
         if self.model_name == 'resnet18':
-            pass
+            x = self.model.conv1(x)
+            x = self.model.bn1(x)
+            x = self.model.relu(x)
+            x = self.model.maxpool(x)
+            x = self.model.layer1(x)
+            x = self.model.layer2(x)
+            x = self.model.layer3(x)
+            x = self.model.layer4(x)
+            features = self.model.avgpool(x)
+            features = features.view(features.size(0), -1)
+            return features
+        else:
+            raise NotImplementedError(f"Extract features non è implementato per il modello {self.model_name}.")
+
+
+    def get_weights(self, nclasses, nlayers):
+        shared = torch.empty(0)
+        distinct = torch.empty(0)
+        if torch.cuda.is_available():
+            shared = shared.to('cuda')
+            distinct = distinct.to('cuda')
+
+        if self.model_name == 'resnet18':
+            for l in nlayers:
+                if l == 1:
+                    w = self.model.fc[0].weight.data  # Forma [10, 512]
+                    bias = self.model.fc[0].bias.data  # Forma [10]
+
+                    bias = bias.unsqueeze(1) 
+                    print("Bias shape:", bias.shape)
+
+                    if distinct.numel() == 0: 
+                        distinct = torch.cat([w, bias], dim=1)  
+                    else:
+                        distinct = torch.cat([distinct, w, bias], dim=1)
+                    print("Distinct shape:", distinct.shape)
+                elif l==2:
+                    shared=torch.cat((shared, self.model.layer4[1].bn2.weight.data.view(-1)))
+                    shared=torch.cat((shared, self.model.layer4[1].bn2.bias.data.view(-1)))
+                    print("Shared shape:", shared.shape)
+                elif l==3:
+                    shared=torch.cat((shared, self.model.layer4[1].conv2.weight.data.view(-1)))
+                    print("Shared shape:", shared.shape)
+                elif l==4:
+                    shared=torch.cat((shared, self.model.layer2[1].bn1.weight.data.view(-1)))
+                    shared=torch.cat((shared, self.model.layer2[1].bn1.bias.data.view(-1)))
+                    print("Shared shape:", shared.shape)
+                elif l==5:
+                    shared=torch.cat((shared, self.model.layer1[1].conv1.weight.data.view(-1)))
+                    print("Shared shape:", shared.shape)
         elif self.model_name == 'efficientnet_b0':
+            pass
+        
+        return (distinct, shared)
+
+
+    def set_weights(self, distinct, shared, nclasses, nlayers):
+        idx_distinct = 0
+        idx_shared = 0
+
+        if torch.cuda.is_available():
+            distinct = distinct.to('cuda')
+            shared = shared.to('cuda')
+
+        if self.model_name == 'resnet18':
+            for l in nlayers:
+                if l == 1:
+                    for i in range(distinct.size(0)):
+                        self.model.fc[0].weight.data[i] = distinct[i][:-1]
+                        self.model.fc[0].bias.data[i] = distinct[i][-1]
+                elif l == 2:
+                    # Assegna i pesi e bias a layer4[1].bn2
+                    bn_w_shape = self.model.layer4[1].bn2.weight.data.shape
+                    bn_b_shape = self.model.layer4[1].bn2.bias.data.shape
+
+                    bn_weight = shared[idx_shared:idx_shared + bn_w_shape[0]].view(bn_w_shape)
+                    bn_bias = shared[idx_shared + bn_w_shape[0]:idx_shared + bn_w_shape[0] + bn_b_shape[0]].view(bn_b_shape)
+
+                    self.model.layer4[1].bn2.weight.data.copy_(bn_weight)
+                    self.model.layer4[1].bn2.bias.data.copy_(bn_bias)
+
+                    idx_shared += bn_w_shape[0] + bn_b_shape[0]
+
+                elif l == 3:
+                    # Assegna i pesi a layer4[1].conv2
+                    conv_w_shape = self.model.layer4[1].conv2.weight.data.shape
+                    conv_weight = shared[idx_shared:idx_shared + conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]].view(conv_w_shape)
+
+                    self.model.layer4[1].conv2.weight.data.copy_(conv_weight)
+
+                    idx_shared += conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]
+
+                elif l == 4:
+                    # Assegna i pesi e bias a layer2[1].bn1
+                    bn_w_shape = self.model.layer2[1].bn1.weight.data.shape
+                    bn_b_shape = self.model.layer2[1].bn1.bias.data.shape
+
+                    bn_weight = shared[idx_shared:idx_shared + bn_w_shape[0]].view(bn_w_shape)
+                    bn_bias = shared[idx_shared + bn_w_shape[0]:idx_shared + bn_w_shape[0] + bn_b_shape[0]].view(bn_b_shape)
+
+                    self.model.layer2[1].bn1.weight.data.copy_(bn_weight)
+                    self.model.layer2[1].bn1.bias.data.copy_(bn_bias)
+
+                    idx_shared += bn_w_shape[0] + bn_b_shape[0]
+
+                elif l == 5:
+                    # Assegna i pesi a layer1[1].conv1
+                    conv_w_shape = self.model.layer1[1].conv1.weight.data.shape
+                    conv_weight = shared[idx_shared:idx_shared + conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]].view(conv_w_shape)
+
+                    self.model.layer1[1].conv1.weight.data.copy_(conv_weight)
+
+                    idx_shared += conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]
+
+        elif self.model_name == 'efficientnet_b0':
+            # Se hai bisogno di implementare anche per EfficientNet B0, puoi farlo qui
             pass
 
         return
 
-    def set_weights(self, distinct, shared, nlayers):
-        if self.model_name == 'resnet18':
-            pass
-        elif self.model_name == 'efficientnet_b0':
-            pass
+
 
 if __name__ == '__main__':
 
