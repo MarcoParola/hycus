@@ -73,7 +73,28 @@ class Classifier(torch.nn.Module):
                 torch.nn.AvgPool2d(kernel_size=13, stride=1, padding=0)
             )
 
-    def extract_features(self, x):
+    def extract_feature(self, x):
+        if "DenseNet" in self.weights_cls:
+            features = self.model.features(x)
+            out = nn.ReLU(inplace=True)(features)
+            out = nn.AdaptiveAvgPool2d((1, 1))(out)
+            out = torch.flatten(out, 1)
+        elif "MaxVit" in self.weights_cls:
+            features = self.model.forward_features(x)
+        elif "ResNet" in self.weights_cls or "RegNet" in self.weights_cls or "GoogLeNet" in self.weights_cls:
+            features = self.model.avgpool(self.model.layer4(self.model.layer3(self.model.layer2(self.model.layer1(self.model.relu(self.model.bn1(self.model.conv1(x))))))))
+            features = torch.flatten(features, 1)
+        elif "Swin" in self.weights_cls:
+            features = self.model.forward_features(x)
+        elif "ViT" in self.weights_cls:
+            features = self.model.forward_features(x)
+        elif "SqueezeNet1_1" in self.weights_cls or "SqueezeNet1_0" in self.weights_cls:
+            features = self.model.features(x)
+        else:
+            raise ValueError("Unsupported model type")
+
+    def get_weights(self, nclasses, nlayers):
+        
         if self.model_name == 'resnet18':
             x = self.model.conv1(x)
             x = self.model.bn1(x)
@@ -215,4 +236,6 @@ if __name__ == '__main__':
     for model_name in model_list:
         print(model_name)
         model = Classifier(model_name, 10)
-        print(model.model_name, model(img).shape)
+        print(model.model_name, model(img).shape, model.extract_feature(img).shape)
+        
+        
