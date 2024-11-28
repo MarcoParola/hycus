@@ -60,7 +60,7 @@ def main(cfg):
         cfg.weights_name,
         num_classes=cfg[cfg.dataset.name].n_classes,
         finetune=False)
-    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_icus_' + cfg.model + '.pth')
+    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_3_icus_' + cfg.model + '.pth')
     model_unlearned_icus.load_state_dict(torch.load(weights, map_location=cfg.device))
     model_unlearned_icus = model_unlearned_icus.to(device).eval()
 
@@ -69,7 +69,7 @@ def main(cfg):
         cfg.weights_name,
         num_classes=cfg[cfg.dataset.name].n_classes,
         finetune=False)
-    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_scrub_' + cfg.model + '.pth')
+    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_3_scrub_' + cfg.model + '.pth')
     model_unlearned_scrub.load_state_dict(torch.load(weights, map_location=cfg.device))
     model_unlearned_scrub = model_unlearned_scrub.to(device).eval()
 
@@ -78,7 +78,7 @@ def main(cfg):
         cfg.weights_name,
         num_classes=cfg[cfg.dataset.name].n_classes,
         finetune=False)
-    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_2_badT_' + cfg.model + '.pth')
+    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_3_badT_' + cfg.model + '.pth')
     model_unlearned_badt.load_state_dict(torch.load(weights, map_location=cfg.device))
     model_unlearned_badt = model_unlearned_badt.to(device).eval()
 
@@ -122,9 +122,6 @@ def main(cfg):
         image_count = 0
         for i in range(images.size(0)):
 
-            if image_count > 15:
-                break
-
             image = images[i]
             saliency = saliency_maps[i]
             saliency_unlearned_icus = saliency_maps_unlearned_icus[i]
@@ -165,6 +162,7 @@ def main(cfg):
                 os.makedirs('./outputs/xai/')
             plt.tight_layout()
             plt.savefig(f'./outputs/xai/saliency_{batch_cout}_{image_count}.png')
+            plt.close()
 
             image_count += 1
         
