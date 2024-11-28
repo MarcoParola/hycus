@@ -10,3 +10,6 @@
 
 
 ## generate saliency maps
+
+
+## solve classification on the feature using linear-layer or kNN
