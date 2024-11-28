@@ -43,7 +43,7 @@ def compute_confusion_matrix(model, data_loader, cfg, unlearned=False, device='c
     cm = confusion_matrix(y_true, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
     disp.plot(cmap=plt.cm.Blues, values_format='d')  # Usa una mappa colori e formato intero
-    plt.title("Confusion Matrix")
+    plt.title("Confusion Matrix "+cfg.unlearning_method +" forgetting size "+str(cfg.forgetting_set_size))
 
     # Salva la matrice di confusione in base al fatto che si stia facendo unlearning
     if unlearned:
