@@ -67,7 +67,7 @@ def main(cfg):
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
-    '''
+    
     # Plotting
     pca, shared_limits = plot_features(model, test_loader, forgetting_subset, unlearned=False)
     pca=plot_features_3d(model, test_loader, forgetting_subset)
@@ -110,7 +110,6 @@ def main(cfg):
         })
     print("Accuracy forget ", metrics['accuracy_forgetting'])
     print("Accuracy retain ", metrics['accuracy_retaining'])
-    '''
 
 
 if __name__ == '__main__':

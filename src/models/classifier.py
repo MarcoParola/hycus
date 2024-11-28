@@ -9,6 +9,7 @@ class Classifier(torch.nn.Module):
     def __init__(self, weights, num_classes, finetune=False):
         super().__init__()
         assert "." in weights, "Weights must be <MODEL>.<WEIGHTS>"
+        self.weights_cls = weights
         weights_cls = weights.split(".")[0]
         weights_name = weights.split(".")[1]
         self.model_name = weights.split("_Weights")[0].lower()
@@ -73,7 +74,7 @@ class Classifier(torch.nn.Module):
                 torch.nn.AvgPool2d(kernel_size=13, stride=1, padding=0)
             )
 
-    def extract_feature(self, x):
+    def extract_features(self, x):
         if "DenseNet" in self.weights_cls:
             features = self.model.features(x)
             out = nn.ReLU(inplace=True)(features)
@@ -92,6 +93,7 @@ class Classifier(torch.nn.Module):
             features = self.model.features(x)
         else:
             raise ValueError("Unsupported model type")
+        return features
 
     def get_weights(self, nclasses, nlayers):
         
