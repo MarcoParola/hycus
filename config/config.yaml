@@ -8,10 +8,10 @@ seed: -1
 
 model: resnet
 weights_name: ResNet18_Weights.IMAGENET1K_V1
-unlearning_method: icus
+unlearning_method: badT
 forgetting_set_strategy: random_class
 forgetting_set: random
-forgetting_set_size: 2
+forgetting_set_size: 3
 
 dataset: 
   name: cifar10
