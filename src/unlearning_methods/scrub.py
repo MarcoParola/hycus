@@ -6,6 +6,7 @@ import numpy as np
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.nn import functional as F
+from src.metrics.metrics import compute_metrics
 from src.utils import LinearLR
 from src.unlearning_methods.base import BaseUnlearningMethod
 
@@ -16,6 +17,7 @@ class Scrub(BaseUnlearningMethod):
         print("Inizializzazione di Scrub")
         self.og_model = copy.deepcopy(model)  # original model copy
         self.forgetting_subset = forgetting_subset
+        self.opt=opt
         self.criterion = nn.CrossEntropyLoss()
         self.logger = logger
         self.alpha = alpha
@@ -44,7 +46,8 @@ class Scrub(BaseUnlearningMethod):
             self.maximize = False
             self._train_one_phase(loader=retain_loader)
             if self.val_loader is not None:
-                self.validate(self.val_loader)
+                metrics = compute_metrics(self.model, val_loader, self.opt.dataset.classes, self.forgetting_subset)
+                self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
         return self.model
             
 
@@ -77,5 +80,4 @@ class Scrub(BaseUnlearningMethod):
             loss = -loss
         
         return output, loss
-
 

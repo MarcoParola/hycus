@@ -223,9 +223,9 @@ def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=
     # Save the plot with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
-        plt.savefig('fig/feature_plot_3d_unlearned_'+timestamp+'.png')
+        plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
     else:
-        plt.savefig('fig/feature_plot_3d_'+timestamp+'.png')
+        plt.savefig('fig/feature_plot_3d_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
     
     # Show the plot
     plt.show()
@@ -309,9 +309,9 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
-        plt.savefig('fig/feature_plot_2d_unlearned_'+timestamp+'.png')
+        plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
     else:
-        plt.savefig('fig/feature_plot_2d_'+timestamp+'.png')
+        plt.savefig('fig/feature_plot_3d_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
     plt.show()
 
     if not unlearned:

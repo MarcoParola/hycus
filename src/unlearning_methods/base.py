@@ -7,6 +7,7 @@ import torchmetrics
 import copy
 import tqdm
 import time
+from src.metrics.metrics import compute_metrics
 from src.utils import LinearLR
 
 
@@ -18,6 +19,8 @@ class BaseUnlearningMethod(ABC):
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0025)
         #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
         #self.top1 = -1
+        if forgetting_set is not None:
+            self.forgetting_subset = forgetting_set
         self.scaler = GradScaler()  # mixed precision
         self.save_files = {"train_time_taken": 0} 
         self.curr_step = 0
@@ -33,7 +36,8 @@ class BaseUnlearningMethod(ABC):
             time_start = time.process_time() 
             self.train_one_epoch(loader=train_loader) 
             self.epoch += 1
-            self.validate(val_loader) # Validate the model
+            metrics = compute_metrics(self.model, val_loader, self.opt.dataset.classes, self.forgetting_subset)
+            self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
             self.save_files['train_time_taken'] += time.process_time() - time_start 
         return self.model
 

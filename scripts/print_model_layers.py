@@ -2,11 +2,12 @@ import torch
 import hydra
 import torchvision
 import os
+import sys
 
 from torch import nn
 from torchvision import models
 from torchvision.models import ResNet34_Weights, resnet34, VGG11_Weights, vgg11
-
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.models.classifier import Classifier
 
 
