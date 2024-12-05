@@ -59,24 +59,25 @@ def main(cfg):
 
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_'+str(cfg.forgetting_set_size)+'_' +cfg.unlearning_method+'_'+ cfg.model + '.pth')
+    #weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set)+'_' +cfg.unlearning_method+'_'+ cfg.model + '.pth')
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     torch.grad = False
 
     # Estrazione delle caratteristiche dal dataset di addestramento
     print("Current path: ", os.getcwd())
     features, labels = extract_features(model, train_loader, cfg.device)
-    torch.save(features, f"data/features/{cfg.dataset.name}/train_features_{cfg.unlearning_method}_{cfg.forgetting_set_size}.pt")
-    torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_{cfg.unlearning_method}_{cfg.forgetting_set_size}.pt")
+    torch.save(features, f"data/features/{cfg.dataset.name}/train_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+    torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
 
     # Estrazione delle caratteristiche dal dataset di validazione
     features, labels = extract_features(model, val_loader, cfg.device)
-    torch.save(features, f"data/features/{cfg.dataset.name}/val_features_{cfg.unlearning_method}_{cfg.forgetting_set_size}.pt")
-    torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_{cfg.unlearning_method}_{cfg.forgetting_set_size}.pt")
+    torch.save(features, f"data/features/{cfg.dataset.name}/val_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+    torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
 
     # Estrazione delle caratteristiche dal dataset di test
     features, labels = extract_features(model, test_loader, cfg.device)
-    torch.save(features, f"data/features/{cfg.dataset.name}/test_features_{cfg.unlearning_method}_{cfg.forgetting_set_size}.pt")
-    torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_{cfg.unlearning_method}_{cfg.forgetting_set_size}.pt")
+    torch.save(features, f"data/features/{cfg.dataset.name}/test_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+    torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
 
 if __name__ == '__main__':
     main()

@@ -5,7 +5,6 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
-
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
 from src.log import get_loggers
@@ -13,7 +12,6 @@ from omegaconf import OmegaConf
 
 @hydra.main(config_path='config', config_name='config')
 def main(cfg):
-
     # Set seed
     if cfg.seed == -1:
         random_data = os.urandom(4)

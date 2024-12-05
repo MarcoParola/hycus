@@ -4,6 +4,7 @@ from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import torch
 import hydra
 import torchvision
+from datetime import datetime
 from torch.utils.data import DataLoader
 import os
 import sys
@@ -43,13 +44,21 @@ def compute_confusion_matrix(model, data_loader, cfg, unlearned=False, device='c
     cm = confusion_matrix(y_true, y_pred)
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
     disp.plot(cmap=plt.cm.Blues, values_format='d')  # Usa una mappa colori e formato intero
-    plt.title("Confusion Matrix "+cfg.unlearning_method +" forgetting size "+str(cfg.forgetting_set_size))
+    if unlearned:
+        plt.title("Confusion Matrix "+cfg.unlearning_method +" forgetting size "+str(cfg.forgetting_set))
+    else:
+        plt.title("Confusion Matrix pre-unlearning")
+
+    current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Salva la matrice di confusione in base al fatto che si stia facendo unlearning
     if unlearned:
-        plt.savefig(f"src/data/confusion_matrix_postUnl_{cfg.unlearning_method}.png", dpi=300, bbox_inches='tight')
+        plt.savefig(f"src/data/confusion_matrix_postUnl_{cfg.unlearning_method}_{current_datetime}.png", dpi=300, bbox_inches='tight')
     else:
-        plt.savefig(f"src/data/confusion_matrix_preUnl_{cfg.unlearning_method}.png", dpi=300, bbox_inches='tight')
+        if cfg.golden_model==True:
+            plt.savefig(f"src/data/confusion_matrix_golden_{str(cfg.forgetting_set)}.png", dpi=300, bbox_inches='tight')
+        else:
+            plt.savefig(f"src/data/confusion_matrix_preUnl_{cfg.unlearning_method}_{current_datetime}.png", dpi=300, bbox_inches='tight')
     
     plt.close()  # Chiudi la figura per evitare sovrapposizioni
     return cm

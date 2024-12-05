@@ -23,7 +23,7 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
     X_test = scaler.transform(X_test)
 
     # Seleziona il miglior valore di K
-    k_values = list(range(3, 4))
+    k_values = list(range(5, 6))
     best_k = 1
     best_score = 0
 
@@ -84,12 +84,12 @@ def main(cfg):
     wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project+'_knn', config=flat_config)
     
     # Caricamento dei dati
-    train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set_size)+'.pt')
-    train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set_size)+'.pt')
-    validation_features = torch.load('data/features/cifar10/val_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set_size)+'.pt')
-    validation_labels = torch.load('data/features/cifar10/val_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set_size)+'.pt')
-    test_features = torch.load('data/features/cifar10/test_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set_size)+'.pt')
-    test_labels = torch.load('data/features/cifar10/test_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set_size)+'.pt')
+    train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+    train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+    validation_features = torch.load('data/features/cifar10/val_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+    validation_labels = torch.load('data/features/cifar10/val_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+    test_features = torch.load('data/features/cifar10/test_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+    test_labels = torch.load('data/features/cifar10/test_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
 
     # Esegui il classificatore KNN con logging su wandb
     knn(train_features, train_labels, validation_features, validation_labels, test_features, test_labels, cfg)

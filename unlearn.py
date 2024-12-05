@@ -100,7 +100,7 @@ def main(cfg):
     plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
     
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
-    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_' + str(cfg.forgetting_set_size) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
+    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
