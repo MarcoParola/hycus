@@ -35,8 +35,8 @@ def main(cfg):
         model.load_state_dict(torch.load(weights, map_location=cfg.device))
     model.eval()  # Imposta il modello in modalità di valutazione
 
-    class_correct = [0] * 10  # Contatore delle previsioni corrette per ciascuna classe (10 classi in CIFAR-10)
-    class_total = [0] * 10  # Contatore delle immagini totali per ciascuna classe
+    class_correct = [0] * cfg.dataset.classes  # Contatore delle previsioni corrette per ciascuna classe (10 classi in CIFAR-10)
+    class_total = [0] * cfg.dataset.classes  # Contatore delle immagini totali per ciascuna classe
 
     with torch.no_grad():  # Disattiva il calcolo dei gradienti
         for images, labels in test_loader:
@@ -51,7 +51,7 @@ def main(cfg):
                 if predicted[i] == label:
                     class_correct[label] += 1
 
-    for i in range(10):  # CIFAR-10 ha 10 classi
+    for i in range(cfg.dataset.classes): 
         accuracy = 100 * class_correct[i] / class_total[i] if class_total[i] > 0 else 0
         print(f"Accuracy for class {i}: {accuracy:.2f}%")
 

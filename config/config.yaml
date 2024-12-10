@@ -8,11 +8,12 @@ seed: -1
 
 model: resnet
 weights_name: ResNet18_Weights.IMAGENET1K_V1
-unlearning_method: icus
+unlearning_method: ssd
 forgetting_set_strategy: random_class
-forgetting_set: [3,4,5]
+forgetting_set: [1, 4, 5]
 forgetting_set_size: 3
-golden_model: True
+golden_model: False
+original_model: False
 
 dataset: 
   name: cifar10
@@ -24,7 +25,7 @@ device: "cuda"
 
 train:
   batch_size: 32
-  max_epochs: 7
+  max_epochs: 120
   lr: 5e-4
   save_path: checkpoints/
   num_workers: 1

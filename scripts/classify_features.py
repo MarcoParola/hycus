@@ -84,12 +84,29 @@ def main(cfg):
     wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project+'_knn', config=flat_config)
     
     # Caricamento dei dati
-    train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-    train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-    validation_features = torch.load('data/features/cifar10/val_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-    validation_labels = torch.load('data/features/cifar10/val_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-    test_features = torch.load('data/features/cifar10/test_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-    test_labels = torch.load('data/features/cifar10/test_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+    if cfg.golden_model==True:
+        train_features = torch.load('data/features/cifar10/train_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        train_labels = torch.load('data/features/cifar10/train_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        validation_features = torch.load('data/features/cifar10/val_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        validation_labels = torch.load('data/features/cifar10/val_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        test_features = torch.load('data/features/cifar10/test_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        test_labels = torch.load('data/features/cifar10/test_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+    else:
+        if cfg.orignal_model==True:
+        train_features = torch.load('data/features/cifar10/train_features_original.pt')
+        train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
+        validation_features = torch.load('data/features/cifar10/val_features_original.pt')
+        validation_labels = torch.load('data/features/cifar10/val_labels_original.pt')
+        test_features = torch.load('data/features/cifar10/test_features_original.pt')
+        test_labels = torch.load('data/features/cifar10/test_labels_original.pt')
+        else:
+            train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            validation_features = torch.load('data/features/cifar10/val_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            validation_labels = torch.load('data/features/cifar10/val_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            test_features = torch.load('data/features/cifar10/test_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            test_labels = torch.load('data/features/cifar10/test_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+        
 
     # Esegui il classificatore KNN con logging su wandb
     knn(train_features, train_labels, validation_features, validation_labels, test_features, test_labels, cfg)

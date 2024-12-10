@@ -14,7 +14,7 @@ from scripts.features_plotting import plot_features, plot_features_3d
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset
-from src.models.resnet import ResNet9, ResNet18, ResidualBlock # TODO remove this import
+from src.models.resnet import ResNet9, ResNet18, ResidualBlock 
 from src.models.classifier import Classifier
 from src.unlearning_methods.icus import Icus
 
@@ -53,7 +53,6 @@ def main(cfg):
         shuffle=False, 
         num_workers=cfg.train.num_workers)
 
-    # Load model QUI CARICO I VECCHI PESI.. SCOMMENTA LA PARTE DOPO CHE AVEVO COMMENTATO TEMPORANEAMENTE
     print("Model loading")
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
@@ -67,7 +66,6 @@ def main(cfg):
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
-    
     # Plotting
     pca, shared_limits = plot_features(model, test_loader, forgetting_subset, unlearned=False)
     pca=plot_features_3d(model, test_loader, forgetting_subset)

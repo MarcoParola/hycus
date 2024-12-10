@@ -29,16 +29,12 @@ def main(cfg):
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
 
-    # TODO use load_model function defined in src/models/model.py
-    # remember to fix that function
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
     criterion = torch.nn.CrossEntropyLoss()
 
-    # Early stopping
-    #early_stopping = get_early_stopping(cfg)
     for epoch in range(cfg.train.max_epochs):
         print(f"Epoch {epoch+1}/{cfg.train.max_epochs}")
         model.train()

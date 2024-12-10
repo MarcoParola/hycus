@@ -78,8 +78,3 @@ class BadT(BaseUnlearningMethod):
             self.scheduler.step(loss) #aggiorno il learning rate
             print(f'Epoca: {self.epoch}')
             return
-
-
-"""
-It could be interesting to validate the random model as well to see from which baseline we are starting.
-"""
