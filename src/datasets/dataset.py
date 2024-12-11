@@ -6,7 +6,7 @@ import os
 import math
 from torch.utils.data import DataLoader
 
-# TODO, probabilmente c'è da introdurre nuova logica per includere testi
+
 class ImgTextDataset(torch.utils.data.Dataset):
     def __init__(self, orig_dataset, transform=None):
         self.orig_dataset = orig_dataset

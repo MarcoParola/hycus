@@ -10,7 +10,7 @@ from src.datasets.dataset import load_dataset, get_retain_forget_dataloaders
 from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
-from scripts.features_plotting import plot_features, plot_features_3d
+from scripts.plot.pca_tsne import plot_features, plot_features_3d
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset

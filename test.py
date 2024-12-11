@@ -5,7 +5,7 @@ import torch.nn as nn
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
 from scripts.extract_features import extract_features
-from scripts.confusion_matrix import compute_confusion_matrix
+from scripts.plot.confusion_matrix import compute_confusion_matrix
 import torch.optim as optim
 import numpy as np
 import os

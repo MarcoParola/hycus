@@ -8,9 +8,9 @@ seed: -1
 
 model: resnet
 weights_name: ResNet18_Weights.IMAGENET1K_V1
-unlearning_method: ssd
+unlearning_method: icus
 forgetting_set_strategy: random_class
-forgetting_set: [1, 4, 5]
+forgetting_set: [3, 4, 5]
 forgetting_set_size: 3
 golden_model: False
 original_model: False
