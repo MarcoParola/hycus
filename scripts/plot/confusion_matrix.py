@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
+from matplotlib.colors import TwoSlopeNorm
 
 # Funzione per calcolare la matrice di confusione
 def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=False, device='cpu'):
@@ -73,7 +74,7 @@ def difference_between_matrices(cm1, cm2):
     return cm_diff
 
 
-def plot_multiple_confusion_matrices(cms, cfg, labels=None, rows=2, cols=5, positions=None):
+def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=5, positions=None):
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
     axes = axes.flatten()  # Converti la griglia di assi in un array 1D
 
@@ -81,20 +82,37 @@ def plot_multiple_confusion_matrices(cms, cfg, labels=None, rows=2, cols=5, posi
     if positions is None:
         positions = list(range(len(cms)))
 
+    # Trova i valori massimo e minimo tra tutte le confusion matrix per mantenere la scala coerente
+    overall_min = min(cm.min() for cm in cms)
+    overall_max = max(cm.max() for cm in cms)
+
+    # Crea una normalizzazione centrata su 0
+    norm = TwoSlopeNorm(vmin=overall_min, vcenter=0, vmax=overall_max)
+
     # Aggiungi confusion matrix nelle posizioni specificate
     for i, pos in enumerate(positions):
         if i < len(cms) and pos < len(axes):
-            disp = ConfusionMatrixDisplay(confusion_matrix=cms[i], display_labels=labels)
-            disp.plot(ax=axes[pos], cmap=plt.cm.Blues, values_format='d')
-            axes[pos].set_title(f"Matrix {i+1}")
+            ax = axes[pos]
+            # Usa la mappa di colori con TwoSlopeNorm
+            im = ax.imshow(cms[i], interpolation='nearest', cmap=plt.cm.bwr, norm=norm)
+            ax.set_title(f"Matrix {names[i]}")
+            if labels is not None:
+                ax.set_xticks(np.arange(len(labels)))
+                ax.set_yticks(np.arange(len(labels)))
+                ax.set_xticklabels(labels)
+                ax.set_yticklabels(labels)
+
+            # Etichette
+            for j in range(cms[i].shape[0]):
+                for k in range(cms[i].shape[1]):
+                    ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")
 
     # Nascondi gli assi non utilizzati
     for j in range(len(cms), len(axes)):
         axes[j].axis('off')
-    current_dir = os.getcwd()
-    plt.savefig("src/data/differences_between_confusion_matrix_"+str(cfg.forgetting_set)+".png", dpi=300, bbox_inches='tight')
-    plt.show()
 
+    # Salva la figura
+    plt.savefig("src/data/differences_between_confusion_matrix_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
 
 
 @hydra.main(config_path='../../config', config_name='config', version_base=None)
@@ -186,7 +204,9 @@ def main(cfg):
     cm10 = difference_between_matrices(cm6, cm5)
     cms.append(cm10)
 
-    plot_multiple_confusion_matrices(cms, cfg, labels=np.arange(cfg.dataset.classes), rows=2, cols=5)
+    names=["original", "scrub", "ssd", "badT", "icus", "golden", "golden-scrub", "golden-ssd", "golden-badT", "golden-icus"]
+
+    plot_multiple_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=5)
 
 
 if __name__ == '__main__':

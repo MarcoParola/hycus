@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import random
+import json
+import hydra
 from sklearn.svm import SVC
 from torch.utils.data.sampler import SubsetRandomSampler
 from torch.utils.data import DataLoader
@@ -51,183 +53,77 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset):
     metrics = {**classification_metrics}
     return metrics
 
+def get_case(data, unlearning_method, forgetting_set):
+    for method in data["unlearning_methods"]:
+        if method["method_name"] == unlearning_method:
+            for case in method["cases"]:
+                if str(case["forgetting_set"]) == forgetting_set:
+                    return case
+    if unlearning_method == "original_model":
+        for case in data["original_model"]:
+            if str(case["forgetting_set"]) == forgetting_set:
+                return case
+    return None
 
-"""def prepare_membership_inference_attack(test, forgetting_subset, batch_size):
-    forget_indices_test = [i for i in range(len(test)) if test[i][1] in forgetting_subset]
-    forget_indices_test_loader = DataLoader(test, batch_size=batch_size, sampler=SubsetRandomSampler(forget_indices_test))
-    return forget_indices_test_loader
-
-##### CODE FROM https://github.com/ayushkumartarun/zero-shot-unlearning/blob/main/metrics.py ###### 
-def entropy(p, dim = -1, keepdim = False):
-    return -torch.where(p > 0, p * p.log(), p.new([0.0])).sum(dim=dim, keepdim=keepdim)
-
-def collect_prob(data_loader, model):   
-    data_loader = torch.utils.data.DataLoader(data_loader.dataset, batch_size=1, shuffle=False, num_workers = 8, prefetch_factor = 10)
-    prob = []
-    with torch.no_grad():
-        for batch in data_loader:
-            batch = [tensor.to(next(model.parameters()).device) for tensor in batch]
-            data, target = batch
-            output = model(data)
-            prob.append(F.softmax(output, dim=-1).data)
-    return torch.cat(prob)
-
-
-def compute_mia(test_forget_loader, train_forget_loader, model, num_classes, loggers):
-    attack_result = get_membership_attack_prob(test_forget_loader, train_forget_loader, model)
-    loggers.log_metrics({"Membership Inference Attack": attack_result}, step=0)
-    print("Membership Inference Attack: ", attack_result)
-
-
-
-def get_membership_attack_prob(test_loader, train_loader, model):
-    X_ts, Y_ts, X_tr, Y_tr = get_membership_attack_data(test_loader, train_loader, model)
-    clf = SVC(C=3,gamma='auto',kernel='rbf')
-    clf.fit(X_tr, Y_tr)
-
-    size_test=len(X_ts)
-    size_train=len(X_tr)
-    prob_test = size_test / (size_test + size_train)
-    results = []
-    for i in range(size_test):
-        b = np.random.rand() 
-        if b < prob_test:
-            j = random.randint(0, size_test-1)
-            sample = X_ts[j]
-        else:
-            j = random.randint(0, size_train-1)
-            sample = X_tr[j]
-        pred = clf.predict([sample])
-        results.append(pred[0])
-    return np.mean(results)
+def update_case(data, unlearning_method, forgetting_set, new_accuracy_retain, new_accuracy_forget):
+    for method in data["unlearning_methods"]:
+        if method["method_name"] == unlearning_method:
+            for caso in method["cases"]:
+                if str(caso["forgetting_set"]) == forgetting_set:
+                    caso["accuracy_retain"] = new_accuracy_retain
+                    caso["accuracy_forget"] = new_accuracy_forget
+                    with open("src/metrics/metrics.json", "w") as file:
+                        json.dump(data, file, indent=2)
+                    return True
+    if unlearning_method == "original_model":
+        for caso in data["original_model"]:
+            if caso["forgetting_set"] == forgetting_set:
+                caso["accuracy_retain"] = new_accuracy_retain
+                with open("src/metrics/metrics.json", "w") as file:
+                    json.dump(data, file, indent=2)
+                return True
+    return False
 
 
-def get_membership_attack_data(test_loader, train_loader, model):
-    X_ts = collect_prob(test_loader, model)
-    X_tr = collect_prob(train_loader, model)
-    #X_ts = entropy(X_ts).cpu().numpy().reshape(-1, 1) # TODO secondo me non serve fare l'entropy, vediamo se funziona senza, nel caso scommentare
-    #X_tr = entropy(X_tr).cpu().numpy().reshape(-1, 1)
-    Y_ts = np.zeros(len(X_ts))
-    Y_tr = np.ones(len(X_tr))
-    return X_ts, Y_ts, X_tr, Y_tr
+def add_case(data, unlearning_method, forgetting_set, accuracy_retain, accuracy_forget):
+    for method in data["unlearning_methods"]:
+        if method["method_name"] == unlearning_method:
+            # Controlla se il caso esiste già
+            for case in method["cases"]:
+                if str(case["forgetting_set"]) == forgetting_set:
+                    return False  # Caso già esistente
+            # Aggiungi il nuovo caso
+            method["cases"].append({
+                "forgetting_set": forgetting_set,
+                "accuracy_retain": accuracy_retain,
+                "accuracy_forget": accuracy_forget
+            })
+            with open("src/metrics/metrics.json", "w") as file:
+                json.dump(data, file, indent=2)
+            return True
+    return False
 
+def calculate_aus(unlearning_method, forgetting_set):
+    with open("src/metrics/metrics.json", "r") as file:
+        data = json.load(file)
+    original=get_case(data, "original_model", forgetting_set)
+    unl=get_case(data, unlearning_method, forgetting_set)
+    return (1 - (original["accuracy_retain"] - unl["accuracy_retain"]))/(1 + abs(unl["accuracy_forget"]))
 
+@hydra.main(config_path='../../config', config_name='config', version_base=None)
+def main(cfg):
+    for method in ["icus", "scrub", "ssd", "badT"]:
+        aus=calculate_aus(method, str(cfg.forgetting_set))
+        print("Method: "+method+" AUS: "+str(aus))
+    
+    #CODICI USATI PER TESTARE CHE ANDASSE
+    """print("Modifica test")
+    with open("src/metrics/metrics.json", "r") as file:
+        data = json.load(file)
+    done = update_case(data, "ssd", str(cfg.forgetting_set), 0.6, 0.1)
+    print("Modifica test 2")
+    done = add_case(data, "ssd", "[2, 3, 4]", 0.01, 0.1)
+    print(done)"""
 
-
-#Following functions currently not used
-
-def compute_mia(retain_loader, forget_loader, test_loader, model, num_classes, forgetting_subset, loggers, current_step):
-    attack_result = get_membership_attack_prob(retain_loader, forget_loader, test_loader, model)
-    metrics_test = compute_metrics(model, test_loader, num_classes, forgetting_subset)
-    accuracy_test = metrics_test['accuracy']
-    metrics = {
-        "accuracy_test": accuracy_test,
-        "membership_inference_attack_result": attack_result
-    }
-    print("Model metrics post-unlearning on test set and membership inference attack:")
-    loggers.log_metrics({"Membership Inference Attack": metrics["membership_inference_attack_result"]}, step=0)
-    print(metrics)
-
-
-def get_membership_attack_data(retain_loader, forget_loader, test_loader, model):    
-    retain_prob = collect_prob(retain_loader, model)
-    forget_prob = collect_prob(forget_loader, model)
-    test_prob = collect_prob(test_loader, model)
-    
-    X_r = torch.cat([entropy(retain_prob), entropy(test_prob)]).cpu().numpy().reshape(-1, 1)
-    Y_r = np.concatenate([np.ones(len(retain_prob)), np.zeros(len(test_prob))])
-    
-    X_f = entropy(forget_prob).cpu().numpy().reshape(-1, 1)
-    Y_f = np.concatenate([np.ones(len(forget_prob))])    
-    return X_f, Y_f, X_r, Y_r
-
-def get_membership_attack_prob(retain_loader, forget_loader, test_loader, model):
-    X_f, Y_f, X_r, Y_r = get_membership_attack_data(retain_loader, forget_loader, test_loader, model)
-    clf = SVC(C=3,gamma='auto',kernel='rbf')
-    #clf = LogisticRegression(class_weight='balanced',solver='lbfgs',multi_class='multinomial')
-    clf.fit(X_r, Y_r)
-    results = clf.predict(X_f)
-    return results.mean()
-
-def relearn_time(model, train_loader, valid_loader, reqAcc, lr):
-    # measuring relearn time for gold standard model
-    rltime = 0
-    curr_Acc = 0
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    
-    
-    # we will try the relearning step till 4 epochs.
-    for epoch in range(10):
-        
-        for batch in train_loader:
-            model.train()
-            loss = training_step(model, batch)
-            loss.backward()
-            
-            optimizer.step()
-            optimizer.zero_grad()
-            history = [evaluate(model, valid_dl)]
-            curr_Acc = history[0]["Acc"]*100
-            print(curr_Acc, sep=',')        
-            
-            rltime += 1
-            if(curr_Acc >= reqAcc):
-                break
-                
-        if(curr_Acc >= reqAcc):
-            break
-    return rltime
-
-def ain(full_model, model, gold_model, train_data, val_retain, val_forget, 
-                  batch_size = 256, error_range = 0.05, lr = 0.001):
-    # measuring performance of fully trained model on forget class
-    forget_valid_dl = DataLoader(val_forget, batch_size)
-    history = [evaluate(full_model, forget_valid_dl)]
-    AccForget = history[0]["Acc"]*100
-    
-    print("Accuracy of fully trained model on forget set is: {}".format(AccForget))
-    
-    retain_valid_dl = DataLoader(val_retain, batch_size)
-    history = [evaluate(full_model, retain_valid_dl)]
-    AccRetain = history[0]["Acc"]*100
-    
-    print("Accuracy of fully trained model on retain set is: {}".format(AccRetain))
-    
-    history = [evaluate(model, forget_valid_dl)]
-    AccForget_Fmodel = history[0]["Acc"]*100
-    
-    print("Accuracy of forget model on forget set is: {}".format(AccForget_Fmodel))
-    
-    history = [evaluate(model, retain_valid_dl)]
-    AccRetain_Fmodel = history[0]["Acc"]*100
-    
-    print("Accuracy of forget model on retain set is: {}".format(AccRetain_Fmodel))
-    
-    history = [evaluate(gold_model, forget_valid_dl)]
-    AccForget_Gmodel = history[0]["Acc"]*100
-    
-    print("Accuracy of gold model on forget set is: {}".format(AccForget_Gmodel))
-    
-    history = [evaluate(gold_model, retain_valid_dl)]
-    AccRetain_Gmodel = history[0]["Acc"]*100
-    
-    print("Accuracy of gold model on retain set is: {}".format(AccRetain_Gmodel))
-    
-    reqAccF = (1-error_range)*AccForget
-    
-    print("Desired Accuracy for retrain time with error range {} is {}".format(error_range, reqAccF))
-    
-    train_loader = DataLoader(train_ds, batch_size, shuffle = True)
-    valid_loader = DataLoader(val_forget, batch_size)
-    rltime_gold = relearn_time(model = gold_model, train_loader = train_loader, valid_loader = valid_loader, 
-                               reqAcc = reqAccF,  lr = lr)
-    
-    print("Relearning time for Gold Standard Model is {}".format(rltime_gold))
-    
-    rltime_forget = relearn_time(model = model, train_loader = train_loader, valid_loader = valid_loader, 
-                               reqAcc = reqAccF, lr = lr)
-    
-    print("Relearning time for Forget Model is {}".format(rltime_forget))
-    
-    rl_coeff = rltime_forget/rltime_gold
-    print("AIN = {}".format(rl_coeff))"""
+if __name__ == '__main__':
+    main()

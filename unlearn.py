@@ -7,7 +7,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from src.models.model import load_model
 from src.datasets.dataset import load_dataset, get_retain_forget_dataloaders
-from src.metrics.metrics import compute_metrics
+from src.metrics.metrics import compute_metrics, add_case, update_case
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
 from scripts.plot.pca_tsne import plot_features, plot_features_3d
@@ -109,6 +109,14 @@ def main(cfg):
     print("Accuracy forget ", metrics['accuracy_forgetting'])
     print("Accuracy retain ", metrics['accuracy_retaining'])
 
+    if cfg.unlearn.update_json == True:
+        with open("src/metrics/metrics.json", "r") as file:
+            data = json.load(file)
+        done = add_case(data, cfg.unlearning_method, str(cfg.forgetting_set), metrics['accuracy_retaining'], metrics['accuracy_forgetting'])
+        if not done:
+            done = update_case(data, cfg.unlearning_method, str(cfg.forgetting_set), metrics['accuracy_retaining'], metrics['accuracy_forgetting'])
+        if not done:
+            print("Failed to add/update json")
 
 if __name__ == '__main__':
     main()

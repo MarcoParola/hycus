@@ -1,0 +1,106 @@
+{
+  "original_model": [
+    {
+      "forgetting_set": [
+        1,
+        4,
+        5
+      ],
+      "accuracy_retain": 0.9157142857142857
+    }
+  ],
+  "unlearning_methods": [
+    {
+      "method_name": "icus",
+      "cases": [
+        {
+          "forgetting_set": [
+            1,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.9329,
+          "accuracy_forget": 0.0
+        },
+        {
+          "forgetting_set": [
+            3,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.9367,
+          "accuracy_forget": 0.0
+        }
+      ]
+    },
+    {
+      "method_name": "scrub",
+      "cases": [
+        {
+          "forgetting_set": [
+            1,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.809,
+          "accuracy_forget": 0.05367
+        },
+        {
+          "forgetting_set": [
+            3,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.8989,
+          "accuracy_forget": 0.02967
+        }
+      ]
+    },
+    {
+      "method_name": "ssd",
+      "cases": [
+        {
+          "forgetting_set": [
+            1,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.6,
+          "accuracy_forget": 0.1
+        },
+        {
+          "forgetting_set": [
+            3,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.9367,
+          "accuracy_forget": 0.0
+        }
+      ]
+    },
+    {
+      "method_name": "badT",
+      "cases": [
+        {
+          "forgetting_set": [
+            1,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.9313,
+          "accuracy_forget": 0.08367
+        },
+        {
+          "forgetting_set": [
+            3,
+            4,
+            5
+          ],
+          "accuracy_retain": 0.9427,
+          "accuracy_forget": 0.114
+        }
+      ]
+    }
+  ]
+}
