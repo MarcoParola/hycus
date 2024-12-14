@@ -71,7 +71,6 @@ def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_s
     return retain_dataset, forget_dataset, forget_indices
 
 
-
 ################## STUFF FOR SSD TAKEN FROM CORRECTIVE MACHINE UNLEARNING PAPER ####################
 class ParameterPerturber:
     def __init__(

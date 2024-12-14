@@ -6,11 +6,12 @@ import os
 import math
 from torch.utils.data import DataLoader
 
-# TODO, probabilmente c'è da introdurre nuova logica per includere testi
+
 class ImgTextDataset(torch.utils.data.Dataset):
     def __init__(self, orig_dataset, transform=None):
         self.orig_dataset = orig_dataset
         self.transform = transform
+        self.targets = [lbl for _, lbl in orig_dataset]
 
     def __len__(self):
         return self.orig_dataset.__len__()
@@ -46,6 +47,7 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.2, test_split=0.2):
 
         split = int(len(train) * val_split)
         train, val = torch.utils.data.random_split(train, [len(train) - split, split])
+        test = torch.utils.data.Subset(test, list(range(int(len(test)))))
 
     # CIFAR-100
     elif dataset == 'cifar100':
@@ -150,7 +152,7 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.2, test_split=0.2):
 
 
 def get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset):
-    if cfg.unlearning_method == 'scrub':
+    if cfg.unlearning_method == 'scrub' or cfg.unlearning_method == 'ssd':
         # need to balance number of steps, so need to have different batch sizes
         retain_batch_size = math.ceil(cfg.train.batch_size * (cfg.dataset.classes - cfg.forgetting_set_size) / cfg.forgetting_set_size)
         forget_batch_size = cfg.train.batch_size

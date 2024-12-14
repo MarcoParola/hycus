@@ -5,7 +5,6 @@ from torch.optim import AdamW
 from torch.utils.data import DataLoader
 import wandb
 from tqdm import tqdm
-
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
 from src.log import get_loggers
@@ -13,7 +12,6 @@ from omegaconf import OmegaConf
 
 @hydra.main(config_path='config', config_name='config')
 def main(cfg):
-
     # Set seed
     if cfg.seed == -1:
         random_data = os.urandom(4)
@@ -31,16 +29,12 @@ def main(cfg):
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
 
-    # TODO use load_model function defined in src/models/model.py
-    # remember to fix that function
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
     criterion = torch.nn.CrossEntropyLoss()
 
-    # Early stopping
-    #early_stopping = get_early_stopping(cfg)
     for epoch in range(cfg.train.max_epochs):
         print(f"Epoch {epoch+1}/{cfg.train.max_epochs}")
         model.train()
@@ -78,26 +72,63 @@ def main(cfg):
 
             wandb_logger.log_metrics({"val_loss": val_loss, "val_acc": val_acc})
 
-    # test
     model.eval()
     with torch.no_grad():
         test_loss = 0
         correct = 0
         total = 0
+        correct_retain = 0
+        total_retain = 0
+        correct_forget = 0
+        total_forget = 0
+
         for i, (x, y) in enumerate(tqdm(test_loader)):
             x = x.to(cfg.device)
             y = y.to(cfg.device)
             y_pred = model(x)
             loss = criterion(y_pred, y)
             test_loss += loss.item()
+
             _, predicted = y_pred.max(1)
+
+            # Totale generico
             total += y.size(0)
             correct += predicted.eq(y).sum().item()
 
+            # Filtra per il retain set e forget set
+            for idx in range(y.size(0)):
+                if y[idx].item() in cfg.forgetting_set:
+                    # Dati relativi al forget set
+                    total_forget += 1
+                    if predicted[idx].item() == y[idx].item():
+                        correct_forget += 1
+                else:
+                    # Dati relativi al retain set
+                    total_retain += 1
+                    if predicted[idx].item() == y[idx].item():
+                        correct_retain += 1
+
         test_loss /= len(test_loader)
         test_acc = 100 * correct / total
+        retain_acc = 100 * correct_retain / total_retain if total_retain > 0 else 0.0
+        forget_acc = 100 * correct_forget / total_forget if total_forget > 0 else 0.0
 
-        wandb_logger.log_metrics({"test_loss": test_loss, "test_acc": test_acc})
+        # Log dei risultati
+        wandb_logger.log_metrics({
+            "test_loss": test_loss,
+            "test_acc": test_acc,
+            "retain_acc": retain_acc,
+            "forget_acc": forget_acc
+        })
+
+        if cfg.unlearn.update_json == True:
+            with open("src/metrics/metrics.json", "r") as file:
+                data = json.load(file)
+            done = add_case(data, "original_model", str(cfg.forgetting_set), retain_acc, forget_acc)
+            if not done:
+                done = update_case(data, "original_model", str(cfg.forgetting_set), retain_acc, forget_acc)
+            if not done:
+                print("Failed to add/update json")
 
     #create folder if not exist and save torch model
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
@@ -105,7 +136,6 @@ def main(cfg):
 
 
             
-
 if __name__ == '__main__':
     print('main')
     main()

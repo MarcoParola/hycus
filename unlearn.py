@@ -7,14 +7,14 @@ from torch.utils.data.sampler import SubsetRandomSampler
 
 from src.models.model import load_model
 from src.datasets.dataset import load_dataset, get_retain_forget_dataloaders
-from src.metrics.metrics import compute_metrics
+from src.metrics.metrics import compute_metrics, add_case, update_case
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
-from scripts.features_plotting import plot_features, plot_features_3d
+from scripts.plot.pca_tsne import plot_features, plot_features_3d
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
 from src.datasets.unlearning_dataset import get_unlearning_dataset
-from src.models.resnet import ResNet9, ResNet18, ResidualBlock # TODO remove this import
+from src.models.resnet import ResNet9, ResNet18, ResidualBlock 
 from src.models.classifier import Classifier
 from src.unlearning_methods.icus import Icus
 
@@ -53,7 +53,6 @@ def main(cfg):
         shuffle=False, 
         num_workers=cfg.train.num_workers)
 
-    # Load model QUI CARICO I VECCHI PESI.. SCOMMENTA LA PARTE DOPO CHE AVEVO COMMENTATO TEMPORANEAMENTE
     print("Model loading")
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
@@ -67,7 +66,6 @@ def main(cfg):
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
-    
     # Plotting
     pca, shared_limits = plot_features(model, test_loader, forgetting_subset, unlearned=False)
     pca=plot_features_3d(model, test_loader, forgetting_subset)
@@ -100,7 +98,7 @@ def main(cfg):
     plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
     
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
-    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_' + str(cfg.forgetting_set_size) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
+    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
@@ -111,6 +109,14 @@ def main(cfg):
     print("Accuracy forget ", metrics['accuracy_forgetting'])
     print("Accuracy retain ", metrics['accuracy_retaining'])
 
+    if cfg.unlearn.update_json == True:
+        with open("src/metrics/metrics.json", "r") as file:
+            data = json.load(file)
+        done = add_case(data, cfg.unlearning_method, str(cfg.forgetting_set), metrics['accuracy_retaining'], metrics['accuracy_forgetting'])
+        if not done:
+            done = update_case(data, cfg.unlearning_method, str(cfg.forgetting_set), metrics['accuracy_retaining'], metrics['accuracy_forgetting'])
+        if not done:
+            print("Failed to add/update json")
 
 if __name__ == '__main__':
     main()
