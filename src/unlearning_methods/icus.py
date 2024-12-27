@@ -167,7 +167,7 @@ class Icus(BaseUnlearningMethod):
                     if 1 not in self.opt.unlearn.nlayers:
                         weights[i] = torch.randn_like(weights[i], requires_grad=True)
                     else:
-                        j = random.choice([x for x in range(10) if x not in self.forgetting_subset])
+                        j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
                         weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1] = weights[j][:self.model.model.fc[0].weight.data[i].size(0) + 1]
                         torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
                 elif self.opt.forgetting_set_strategy == "zeros":
@@ -198,7 +198,8 @@ class Icus(BaseUnlearningMethod):
 
         print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
         self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
-        self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
+        if epoch%100 == 0:
+            self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
         
 
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):

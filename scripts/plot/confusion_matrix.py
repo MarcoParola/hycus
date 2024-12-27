@@ -26,6 +26,8 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
     # Softmax
     softmax = torch.nn.Softmax(dim=1)  # Creazione della funzione Softmax lungo la dimensione delle classi
 
+    plt.rcParams["figure.figsize"] = (30, 30)
+
     with torch.no_grad():  # Disabilita il calcolo del gradiente durante la valutazione
         for x, y in data_loader:
             x, y = x.to(device), y.to(device)
@@ -43,8 +45,11 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
 
     # Calcola la matrice di confusione
     cm = confusion_matrix(y_true, y_pred)
-    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
-    disp.plot(cmap=plt.cm.Blues, values_format='d')  # Usa una mappa colori e formato intero
+
+    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm)
+    disp.plot(cmap=plt.cm.Blues, values_format="", include_values=False)
+    
     if unlearned:
         plt.title("Confusion Matrix "+cfg.unlearning_method +" forgetting size "+str(cfg.forgetting_set))
     else:
@@ -55,12 +60,12 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
     # Salva la matrice di confusione in base al fatto che si stia facendo unlearning
     if save_plot:
         if unlearned:
-            plt.savefig(f"src/data/confusion_matrix_postUnl_{cfg.unlearning_method}_{current_datetime}.png", dpi=300, bbox_inches='tight')
+            plt.savefig(f"src/data/confusion_matrix_postUnl_{cfg.unlearning_method}_{str(cfg.forgetting_set)}.png", dpi=300, bbox_inches='tight')
         else:
             if cfg.golden_model==True:
                 plt.savefig(f"src/data/confusion_matrix_golden_{str(cfg.forgetting_set)}.png", dpi=300, bbox_inches='tight')
             else:
-                plt.savefig(f"src/data/confusion_matrix_preUnl_{cfg.unlearning_method}_{current_datetime}.png", dpi=300, bbox_inches='tight')
+                plt.savefig(f"src/data/confusion_matrix_preUnl_{cfg.unlearning_method}_{str(cfg.forgetting_set)}_{cfg.unlearning_method}.png", dpi=300, bbox_inches='tight')
     
     plt.close()  # Chiudi la figura per evitare sovrapposizioni
     return cm
@@ -102,10 +107,10 @@ def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=
                 ax.set_xticklabels(labels)
                 ax.set_yticklabels(labels)
 
-            # Etichette
+            """# Etichette
             for j in range(cms[i].shape[0]):
                 for k in range(cms[i].shape[1]):
-                    ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")
+                    ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")"""
 
     # Nascondi gli assi non utilizzati
     for j in range(len(cms), len(axes)):
@@ -125,7 +130,10 @@ def main(cfg):
     ])
 
     # Carica il dataset CIFAR-10
-    test_dataset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
+    if cfg.dataset.name == 'cifar10':
+        test_dataset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
+    elif cfg.dataset.name == 'cifar100':
+        test_dataset = torchvision.datasets.CIFAR100(root=data_dir, train=False, download=True, transform=transform)
 
     # Crea il DataLoader per il test
     test_loader = DataLoader(test_dataset, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
@@ -135,8 +143,8 @@ def main(cfg):
     model.to(cfg.device)
 
     #ESEGUI PER SINGOLA CONFUSION MATRIX
-    """
-    # Carica i pesi del modello pre-unlearning
+    
+    """# Carica i pesi del modello pre-unlearning
     weights = os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_{cfg.model}.pth")
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
 
@@ -144,7 +152,7 @@ def main(cfg):
     compute_confusion_matrix(model, test_loader, cfg)
 
     # Carica i pesi del modello post-unlearning
-    unlearned_weights = os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_size_{cfg.forgetting_set_size}_{cfg.unlearning_method}_{cfg.model}.pth")
+    unlearned_weights = os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_{cfg.unlearning_method}_{cfg.model}.pth")
     model.load_state_dict(torch.load(unlearned_weights, map_location=cfg.device))
 
     # Calcola e salva la matrice di confusione post-unlearning
