@@ -10,7 +10,7 @@ model: resnet
 weights_name: ResNet18_Weights.IMAGENET1K_V1
 unlearning_method: icus
 forgetting_set_strategy: random_class
-forgetting_set: [4,22,49,51,63,68,72,79,88,93]
+forgetting_set: [62,59,70,6,78,9,55,53,49,2] #[4,22,49,51,63,68,72,79,88,93]
 forgetting_set_size: 10
 golden_model: False
 original_model: False

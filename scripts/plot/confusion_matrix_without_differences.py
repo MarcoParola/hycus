@@ -15,7 +15,7 @@ from scripts.plot.confusion_matrix import compute_confusion_matrix
 from matplotlib.colors import TwoSlopeNorm
 
 def plot_all_the_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=3, positions=None):
-    fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))lll
+    fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
     axes = axes.flatten()  # Converti la griglia di assi in un array 1D
 
     # Se le posizioni non sono specificate, usa un ordine sequenziale
@@ -118,3 +118,6 @@ def main(cfg):
     names=["original", "golden", "scrub", "ssd", "badT", "icus"]
 
     plot_all_the_confusion_metrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=3)
+
+if __name__ == "__main__":
+    main()
