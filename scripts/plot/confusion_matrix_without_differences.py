@@ -117,7 +117,7 @@ def main(cfg):
 
     names=["original", "golden", "scrub", "ssd", "badT", "icus"]
 
-    plot_all_the_confusion_metrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=3)
+    plot_all_the_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=3)
 
 if __name__ == "__main__":
     main()
