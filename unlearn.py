@@ -2,6 +2,7 @@ import hydra
 import torch
 import os
 import numpy as np
+import copy
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 
@@ -10,9 +11,11 @@ from src.datasets.dataset import load_dataset, get_retain_forget_dataloaders
 from src.metrics.metrics import compute_metrics, add_case, update_case
 from src.log import get_loggers
 from src.utils import get_forgetting_subset
+from torch.utils.data import Subset
 from scripts.plot.pca_tsne import plot_features, plot_features_3d
 from src.unlearning_methods.base import get_unlearning_method
 from src.utils import get_retain_and_forget_datasets
+from src.datasets.unlearning_dataset import UnlearningDataset
 from src.datasets.unlearning_dataset import get_unlearning_dataset
 from src.models.resnet import ResNet9, ResNet18, ResidualBlock 
 from src.models.classifier import Classifier
@@ -92,7 +95,22 @@ def main(cfg):
     elif unlearning_method_name == 'badT':
         new_model = unlearning_method.unlearn(unlearning_train, test_loader, val_loader) 
     elif unlearning_method_name == 'ssd':
-        new_model = unlearning_method.unlearn(unlearning_train, test_loader, forget_loader) 
+        partial_forget_set=[]
+        new_model = copy.deepcopy(model)
+        new_model.to(cfg.device)
+        for f in cfg.forgetting_set:
+            partial_forget_set.append(f)
+            actual_retain_set = [i for i in range(cfg.dataset.classes) if i not in partial_forget_set]
+            retain_dataset, forget_dataset, forget_indices, retain_indices = get_retain_and_forget_datasets(train, partial_forget_set, len(partial_forget_set), f)
+            f=[f]
+            unlearning_train = UnlearningDataset(train, forget_indices)
+            forgetting_classes = set(partial_forget_set)-set(f)
+            filtered_indices = [i for i in range(len(unlearning_train)) if unlearning_train[i][1] not in forgetting_classes]
+            print(len(filtered_indices))
+            filtered_dataset = Subset(unlearning_train, filtered_indices)
+            unlearning_train = torch.utils.data.DataLoader(filtered_dataset, batch_size=cfg.train.batch_size, num_workers=8)
+            retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
+            new_model = unlearning_method.unlearn(new_model, unlearning_train, test_loader, forget_loader) 
     
     plot_features(new_model, test_loader, forgetting_subset, pca=pca, unlearned=True, shared_limits=shared_limits)
     plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)

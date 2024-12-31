@@ -62,7 +62,7 @@ class IcusUnlearningDataset(Dataset):
         model = BertModel.from_pretrained('bert-base-uncased')
 
         # List of words to encode
-        if dataset_name=='cifar10':
+        if dataset_name=='cifar10' or dataset_name=='cifar100':
             path = "data/"+dataset_name+"_classes.txt"
             classes = load_words_to_array(path)
         
@@ -135,7 +135,7 @@ def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_ind
         num_classes = cfg.dataset.classes
         infgt = torch.tensor([1 if i in forgetting_subset else 0 for i in range(len(train))])  
         unlearning_train = IcusUnlearningDataset(cfg.dataset.name, cfg.unlearn.nlayers, infgt, model, num_classes, cfg.device)
-        unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=10, num_workers=0)
+        unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=cfg.dataset.classes, num_workers=0)
     else:
         unlearning_train = UnlearningDataset(train, forget_indices)
         unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=cfg.train.batch_size, num_workers=8)

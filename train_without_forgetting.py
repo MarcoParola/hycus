@@ -118,7 +118,7 @@ def main(cfg):
 
     #create folder if not exist and save torch model
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + 'only_retain_set'+str(cfg.forgetting_set)+'.pth'))
+    torch.save(model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '_only_retain_set'+str(cfg.forgetting_set)+'.pth'))
 
 
 

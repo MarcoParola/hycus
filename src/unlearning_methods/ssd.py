@@ -13,8 +13,9 @@ class SSD(BaseUnlearningMethod):
         super().__init__(opt, model, prenet)
         self.logger = logger
 
-    def unlearn(self, wrapped_train_loader, test_loader, forget_loader):
+    def unlearn(self, model, wrapped_train_loader, test_loader, forget_loader):
         actual_iters = self.opt.train_iters
+        self.model=model
         self.opt.train_iters = len(wrapped_train_loader) + len(forget_loader)
         time_start = time.process_time()
         # Call the SSD tuning method to modify the model
