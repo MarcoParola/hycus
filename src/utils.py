@@ -48,46 +48,28 @@ def get_forgetting_subset(forgetting_set, n_classes, forgetting_set_size):
     
         
 def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_set_size, class_forget=None):
-    
     # Ottieni gli indici di tutte le etichette nel dataset completo
     all_indices = np.arange(len(full_dataset))
     all_labels = np.array([full_dataset[i][1] for i in all_indices])
     
     # Trova gli indici dei campioni da dimenticare
     forget_indices = []
-    forget_indices_ssd = []
-
     for class_idx in forgetting_subset:
         class_indices = np.where(all_labels == class_idx)[0]
         forget_indices.extend(class_indices)  # Aggiunge gli indici alla lista
-    if class_forget is not None:
-        class_indices = np.where(all_labels == class_forget)[0]
-        forget_indices_ssd.extend(class_indices)
 
-    if class_forget is None:
-        # Se vuoi evitare duplicati (nel caso ci siano sovrapposizioni), puoi convertire in un set:
-        forget_indices = list(set(forget_indices))
+    # Se vuoi evitare duplicati (nel caso ci siano sovrapposizioni), puoi convertire in un set:
+    forget_indices = list(set(forget_indices))
 
-        # Trova gli indici dei campioni da mantenere
-        retain_indices = list(set(all_indices) - set(forget_indices))
+    # Trova gli indici dei campioni da mantenere
+    retain_indices = list(set(all_indices) - set(forget_indices))
+    # Crea i subset di PyTorch
+    forget_dataset = Subset(full_dataset, forget_indices)
+    retain_dataset = Subset(full_dataset, retain_indices)
+    
+    return retain_dataset, forget_dataset, forget_indices
         
-        # Crea i subset di PyTorch
-        forget_dataset = Subset(full_dataset, forget_indices)
-        retain_dataset = Subset(full_dataset, retain_indices)
-        
-        return retain_dataset, forget_dataset, forget_indices
-        
-    else:
-        forget_indices_ssd = list(set(forget_indices_ssd))
-
-        # Trova gli indici dei campioni da mantenere
-        retain_indices_ssd = list(set(all_indices) - set(forget_indices))
-        
-        # Crea i subset di PyTorch
-        forget_dataset = Subset(full_dataset, forget_indices_ssd)
-        retain_dataset = Subset(full_dataset, retain_indices_ssd)
-        
-        return retain_dataset, forget_dataset, forget_indices_ssd, retain_indices_ssd
+    
 
 
 ################## STUFF FOR SSD TAKEN FROM CORRECTIVE MACHINE UNLEARNING PAPER ####################
@@ -311,4 +293,3 @@ class LinearLR(_LRScheduler):
     def _get_closed_form_lr(self):
         return self.get_lr()
 
-get_forgetting_subset('random', 100, 20)

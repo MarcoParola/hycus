@@ -11,6 +11,7 @@ import sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
+from scripts.descr_and_similarity import calculate_embeddings, calculate_dissimilarity
 from matplotlib.colors import TwoSlopeNorm
 
 # Funzione per calcolare la matrice di confusione
@@ -25,8 +26,8 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
 
     # Softmax
     softmax = torch.nn.Softmax(dim=1)  # Creazione della funzione Softmax lungo la dimensione delle classi
-
-    plt.rcParams["figure.figsize"] = (30, 30)
+    if cfg.dataset.name == 'cifar100':
+        plt.rcParams["figure.figsize"] = (30, 30)
 
     with torch.no_grad():  # Disabilita il calcolo del gradiente durante la valutazione
         for x, y in data_loader:
@@ -46,7 +47,7 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
     # Calcola la matrice di confusione
     cm = confusion_matrix(y_true, y_pred)
 
-    #disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
     disp.plot(cmap=plt.cm.Blues, values_format="", include_values=False)
     
@@ -107,10 +108,11 @@ def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=
                 ax.set_xticklabels(labels)
                 ax.set_yticklabels(labels)
 
-            """# Etichette
-            for j in range(cms[i].shape[0]):
-                for k in range(cms[i].shape[1]):
-                    ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")"""
+            # Etichette
+            if cfg.dataset.name == 'cifar10':
+                for j in range(cms[i].shape[0]):
+                    for k in range(cms[i].shape[1]):
+                        ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")
 
     # Nascondi gli assi non utilizzati
     for j in range(len(cms), len(axes)):
@@ -118,6 +120,23 @@ def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=
 
     # Salva la figura
     plt.savefig("src/data/differences_between_confusion_matrix_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
+
+
+def calculate_weighted_cm_error(test_dataloader, cm, embeddings_dissimilarity, nclasses):
+    class_counts = np.zeros(nclasses)  
+    for _, labels in test_dataloader:
+        for label in labels:
+            class_counts[label] += 1
+    cm = cm.astype(float)
+    for i in range(nclasses):
+        cm[i] = cm[i] / class_counts[i]
+    error = 0
+    for i in range(nclasses):
+        for j in range(nclasses):
+            error += embeddings_dissimilarity[i][j] * abs(cm[i][j])
+    error = error / (nclasses*nclasses)
+    print("Weighted error: ", error)
+    return error
 
 
 @hydra.main(config_path='../../config', config_name='config', version_base=None)
@@ -150,14 +169,15 @@ def main(cfg):
 
     # Calcola e salva la matrice di confusione pre-unlearning
     compute_confusion_matrix(model, test_loader, cfg)
-
+    
     # Carica i pesi del modello post-unlearning
     unlearned_weights = os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_{cfg.unlearning_method}_{cfg.model}.pth")
     model.load_state_dict(torch.load(unlearned_weights, map_location=cfg.device))
 
     # Calcola e salva la matrice di confusione post-unlearning
-    compute_confusion_matrix(model, test_loader, cfg, unlearned=True)"""
-
+    compute_confusion_matrix(model, test_loader, cfg, unlearned=True)
+    """
+    
     #ESEGUI PER DIFFERENZA TRA LE CONFUSION MATRIX
     cms=[]
     #original
@@ -196,26 +216,38 @@ def main(cfg):
     cm6 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
     cms.append(cm6)
 
+    embeddings = calculate_embeddings(cfg.dataset.name)
+    embeddings = embeddings.mean(dim=1)
+    embeddings_dissimilarity = calculate_dissimilarity(embeddings)
+
     #differenza tra golden e scrub
     cm7 = difference_between_matrices(cm6, cm2)
     cms.append(cm7)
+    cm_aux=cm7
+    print("Errore pesato scrub: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
 
     #differenza tra golden e ssd
     cm8 = difference_between_matrices(cm6, cm3)
     cms.append(cm8)
+    cm_aux=cm8
+    print("Errore pesato ssd: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
 
     #differenza tra golden e badT
     cm9 = difference_between_matrices(cm6, cm4)
     cms.append(cm9)
+    cm_aux=cm9
+    print("Errore pesato badT: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
 
     #differenza tra golden e icus
     cm10 = difference_between_matrices(cm6, cm5)
     cms.append(cm10)
+    cm_aux=cm10
+    print("Errore pesato icus: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
 
     names=["original", "scrub", "ssd", "badT", "icus", "golden", "golden-scrub", "golden-ssd", "golden-badT", "golden-icus"]
 
     plot_multiple_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=5)
-
+    
 
 if __name__ == '__main__':
     main()

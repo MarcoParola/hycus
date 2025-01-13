@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
+from src.metrics.metrics import compute_metrics
 from src.log import get_loggers
 from omegaconf import OmegaConf
 
@@ -48,10 +49,13 @@ def main(cfg):
     val_loader = DataLoader(val, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
-    # TODO use load_model function defined in src/models/model.py
-    # remember to fix that function
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
+
+    #Qua caso di unlearning via finetuning. Dovrebbe essere una hit perchè ti alleni solo su classi retain da ora in poi
+    if cfg.unlearning_method == 'finetuning':
+        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
     criterion = torch.nn.CrossEntropyLoss()
@@ -118,7 +122,11 @@ def main(cfg):
 
     #create folder if not exist and save torch model
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
-    torch.save(model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '_only_retain_set'+str(cfg.forgetting_set)+'.pth'))
+    if cfg.unlearning_method == 'finetuning':
+        metrics=compute_metrics(model, test_loader, cfg.dataset.classes, cfg.forgetting_set)
+        torch.save(model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+ str(cfg.forgetting_set) +'_finetuning_'+ cfg.model + '.pth'))
+    else:
+        torch.save(model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '_only_retain_set'+str(cfg.forgetting_set)+'.pth'))
 
 
 
