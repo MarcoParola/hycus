@@ -152,7 +152,6 @@ class Icus(BaseUnlearningMethod):
         self.model.model.fc.train()  # Model in training mode
 
         running_loss = 0.0
-
         for batch in unlearning_train:
             targets, weights, descr, _ = batch
             weights, descr, targets = weights.to(self.device), descr.to(self.device), targets.to(self.device)
@@ -207,7 +206,11 @@ class Icus(BaseUnlearningMethod):
                nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) + \
                self.opt.unlearn.cos_sim_factor * (1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))) 
                #+self.opt.unlearn.latent_reg_factor * nn.MSELoss()(latent_att, latent_weight)
-
+        self.logger.log_metrics({"att_from_att_loss": nn.MSELoss()(descr, att_from_att).item()},step=self.current_step)
+        self.logger.log_metrics({"weights_from_weights_loss": nn.MSELoss()(weights, weight_from_weight).item()},step=self.current_step)
+        self.logger.log_metrics({"weights_from_att_loss": nn.MSELoss()(weights, weight_from_att).item()},step=self.current_step)
+        self.logger.log_metrics({"att_from_weights_loss": nn.MSELoss()(descr, att_from_weight).item()},step=self.current_step)
+        self.logger.log_metrics({"cosine_similarity loss": 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)).item()},step=self.current_step)
         return loss 
 
 
@@ -221,7 +224,10 @@ class Icus(BaseUnlearningMethod):
             d = d.view(-1)
             latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
             latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
-            w = self.joint_ae.ae_w.decode(latent_w)
+            if self.opt.unlearn.reconstruct_from_d == True:
+                w = self.joint_ae.ae_w.decode(latent_d)
+            else:
+                w = self.joint_ae.ae_w.decode(latent_w)
             if 1 in self.opt.unlearn.nlayers: 
                 distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
                 shared_part = w[self.model.model.fc[0].weight.size(1) + 1:]

@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import torch
 import hydra
@@ -12,9 +13,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
 from scripts.plot.confusion_matrix import compute_confusion_matrix
-from matplotlib.colors import TwoSlopeNorm
+from matplotlib.colors import TwoSlopeNorm, Normalize
 
-def plot_all_the_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=3, positions=None):
+def plot_all_the_confusion_matrices(cms, cfg, names, labels=None, rows=1, cols=6, positions=None):
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
     axes = axes.flatten()  # Converti la griglia di assi in un array 1D
 
@@ -26,34 +27,34 @@ def plot_all_the_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=3
     overall_min = min(cm.min() for cm in cms)
     overall_max = max(cm.max() for cm in cms)
 
-    # Crea una normalizzazione centrata su 0
-    norm = TwoSlopeNorm(vmin=overall_min, vcenter=0, vmax=overall_max)
+    # Crea una normalizzazione lineare basata su overall_min e overall_max
+    norm = mcolors.Normalize(vmin=overall_min, vmax=overall_max)
 
     # Aggiungi confusion matrix nelle posizioni specificate
     for i, pos in enumerate(positions):
         if i < len(cms) and pos < len(axes):
             ax = axes[pos]
-            # Usa la mappa di colori con TwoSlopeNorm
-            im = ax.imshow(cms[i], interpolation='nearest', cmap=plt.cm.bwr, norm=norm)
+            # Usa la mappa di colori "Blues"
+            im = ax.imshow(cms[i], interpolation='nearest', cmap=plt.cm.Blues, norm=norm)
             ax.set_title(f"Matrix {names[i]}")
             if labels is not None:
                 ax.set_xticks(np.arange(len(labels)))
                 ax.set_yticks(np.arange(len(labels)))
                 ax.set_xticklabels(labels)
                 ax.set_yticklabels(labels)
-
-            """# Etichette
-            for j in range(cms[i].shape[0]):
-                for k in range(cms[i].shape[1]):
-                    ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")"""
+            if cfg.dataset.name=='cifar10':
+                for j in range(cms[i].shape[0]):
+                    for k in range(cms[i].shape[1]):
+                        ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")
 
     # Nascondi gli assi non utilizzati
     for j in range(len(cms), len(axes)):
         axes[j].axis('off')
 
     # Salva la figura
-    plt.savefig("src/data/all_the_confusion_matrices_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
-
+    #plt.savefig("src/data/all_the_confusion_matrices_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
+    plt.savefig("src/data/all_the_confusion_matrices_" + str(cfg.forgetting_set) + ".pdf")
+    
 
 @hydra.main(config_path='../../config', config_name='config', version_base=None)
 def main(cfg):
@@ -114,10 +115,15 @@ def main(cfg):
     cm6 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
     cms.append(cm6)
 
+    """#finetuning
+    weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_finetuning_{cfg.model}.pth")
+    model.load_state_dict(torch.load(weights, map_location=cfg.device))
+    cm7 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+    cms.append(cm7)"""
 
     names=["original", "golden", "scrub", "ssd", "badT", "icus"]
 
-    plot_all_the_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=3)
+    plot_all_the_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=1, cols=6)
 
 if __name__ == "__main__":
     main()

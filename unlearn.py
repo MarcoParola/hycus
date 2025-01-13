@@ -5,7 +5,6 @@ import numpy as np
 import copy
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
-
 from src.models.model import load_model
 from src.datasets.dataset import load_dataset, get_retain_forget_dataloaders
 from src.metrics.metrics import compute_metrics, add_case, update_case
@@ -95,28 +94,29 @@ def main(cfg):
     elif unlearning_method_name == 'badT':
         new_model = unlearning_method.unlearn(unlearning_train, test_loader, val_loader) 
     elif unlearning_method_name == 'ssd':
-        partial_forget_set=[]
-        new_model = copy.deepcopy(model)
-        new_model.to(cfg.device)
-        for f in cfg.forgetting_set:
-            partial_forget_set.append(f)
-            actual_retain_set = [i for i in range(cfg.dataset.classes) if i not in partial_forget_set]
-            retain_dataset, forget_dataset, forget_indices, retain_indices = get_retain_and_forget_datasets(train, partial_forget_set, len(partial_forget_set), f)
-            f=[f]
-            unlearning_train = UnlearningDataset(train, forget_indices)
-            forgetting_classes = set(partial_forget_set)-set(f)
-            filtered_indices = [i for i in range(len(unlearning_train)) if unlearning_train[i][1] not in forgetting_classes]
-            print(len(filtered_indices))
-            filtered_dataset = Subset(unlearning_train, filtered_indices)
-            unlearning_train = torch.utils.data.DataLoader(filtered_dataset, batch_size=cfg.train.batch_size, num_workers=8)
-            retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
-            new_model = unlearning_method.unlearn(new_model, unlearning_train, test_loader, forget_loader) 
+        if cfg.unlearn.already_forgotten_classes != []:
+            weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.unlearn.already_forgotten_classes)+'_ssd_' + cfg.model + '.pth')
+            model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        
+        labels = np.array(train.targets)
+        indices = np.where(~np.isin(labels, cfg.unlearn.already_forgotten_classes))[0]
+        filtered_train = Subset(train, indices)
+        retain_dataset, forget_dataset, forget_indices = get_retain_and_forget_datasets(filtered_train, cfg.forgetting_set, 1)
+        unlearning_train = UnlearningDataset(filtered_train, forget_indices)
+        unlearning_train = torch.utils.data.DataLoader(unlearning_train, batch_size=cfg.train.batch_size, num_workers=8)
+        retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
+        new_model = unlearning_method.unlearn(model, unlearning_train, test_loader, forget_loader)
+        forgetting_subset.extend(cfg.unlearn.already_forgotten_classes) 
+        print(forgetting_subset)
     
     plot_features(new_model, test_loader, forgetting_subset, pca=pca, unlearned=True, shared_limits=shared_limits)
     plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
     
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
-    torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
+    if cfg.unlearning_method == 'ssd':
+        torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(forgetting_subset) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))    
+    else:
+        torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
     
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
