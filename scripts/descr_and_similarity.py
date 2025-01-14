@@ -13,16 +13,20 @@ def calculate_embeddings(dataset_name):
         
         description=[]
         for y in classes:
-            d = get_wikipedia_description(y)
-            if y=='keyboard':
-                print(d)
-            if d==None:
-                print(f"Could not retrieve description for {y}")
-            if d == '':
+            if y in ['aquarium_fish', 'lamp']:
+                d = y
+            else:
+                d = get_wikipedia_description(y)
+            if d == None or d == "":
                 print(f"Could not retrieve description for {y}")
                 description.append(y) # append the class name if no description is found
             else:
                 description.append(d)
+        for i in range(len(description)):
+            if len(description[i])<30:
+                print(f'{i}: {description[i]}')
+            else:
+                print(f'{i}: {description[i][:30]}...')
                 
             
         # Tokenize the list of words all together
@@ -89,12 +93,11 @@ def calculate_dissimilarity(embeddings, device='cpu'):
     return dissimilarity
 
 def main():
-    dataset='cifar10'
     embeddings = calculate_embeddings("cifar10") 
-    print(embeddings.shape) # (10, 512, 768)
-    mean_embeddings = embeddings.mean(dim=1) # (10, 768)
+    print(embeddings.shape) 
+    mean_embeddings = embeddings.mean(dim=1) 
     print(mean_embeddings.shape)
-    dissimilarity_matrix = calculate_dissimilarity(mean_embeddings)  # (10, 10)
+    dissimilarity_matrix = calculate_dissimilarity(mean_embeddings) 
     print(dissimilarity_matrix.shape)
     for i in range(10):
         print(dissimilarity_matrix[1][i])

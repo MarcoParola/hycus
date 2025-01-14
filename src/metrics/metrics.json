@@ -294,33 +294,33 @@
           "cases": [
             {
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
-              "accuracy_retain": 0.7526,
-              "accuracy_forget": 0.004
+              "accuracy_retain": 0.7997,
+              "accuracy_forget": 0.0075
             },
             {
               "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
-              "accuracy_retain": 0.7063,
-              "accuracy_forget": 0.017
+              "accuracy_retain": 0.7741,
+              "accuracy_forget": 0.015
             },
             {
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
-              "accuracy_retain": 0.715,
-              "accuracy_forget": 0.0165
+              "accuracy_retain": 0.7841,
+              "accuracy_forget": 0.0085
             },
             {
               "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
-              "accuracy_retain": 0.7341,
-              "accuracy_forget": 0.017
+              "accuracy_retain": 0.786,
+              "accuracy_forget": 0.012
             },
             {
               "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
-              "accuracy_retain": 0.7506,
-              "accuracy_forget": 0.0273
+              "accuracy_retain": 0.8117,
+              "accuracy_forget": 0.0073
             },
             {
               "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
-              "accuracy_retain": 0.7114,
-              "accuracy_forget": 0.004
+              "accuracy_retain": 0.7833,
+              "accuracy_forget": 0.013
             }
           ]
         },
