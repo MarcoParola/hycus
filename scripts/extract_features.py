@@ -16,7 +16,6 @@ def extract_features(model, loader, device):
     features = []
     labels = []
 
-    # Disabilitare il calcolo dei gradienti
     with torch.no_grad():
         for images, batch_labels in loader:
             images = images.to(device)
@@ -25,11 +24,11 @@ def extract_features(model, loader, device):
             features.append(batch_features)
             labels.append(batch_labels)
 
-            # Liberiamo memoria GPU ogni tanto
+            # Free gpu memory
             del images, batch_labels, batch_features
             torch.cuda.empty_cache()
 
-    # Unisci tutte le caratteristiche e le etichette in un unico tensor
+    # labels and features are lists of tensors, we concatenate them
     features = torch.cat(features, dim=0)
     labels = torch.cat(labels, dim=0)
 
@@ -41,7 +40,7 @@ def main(cfg):
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     train, val, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
 
-    # Crea i DataLoader per train, val, test
+    # dataloader
     train_loader = torch.utils.data.DataLoader(train, 
         batch_size=cfg.train.batch_size, 
         shuffle=False, 
@@ -64,13 +63,15 @@ def main(cfg):
         if cfg.original_model==True:
             weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_resnet.pth')
         else:
-            weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_size_'+str(cfg.forgetting_set_size)+'_' +cfg.unlearning_method+'_'+ cfg.model + '.pth')
+            if cfg.golden_model==False:
+                weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set)+'_' +cfg.unlearning_method+'_'+ cfg.model + '.pth')
+            else:
+                weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_resnet_only_retain_set'+str(cfg.forgetting_set)+'.pth')
     
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     torch.grad = False
 
-    # Estrazione delle caratteristiche dal dataset di addestramento
-    print("Current path: ", os.getcwd())
+    # train features extraction
     features, labels = extract_features(model, train_loader, cfg.device)
     if cfg.golden_model==True:
         torch.save(features, f"data/features/{cfg.dataset.name}/train_features_only_retain_forgetting_{cfg.forgetting_set}.pt")
@@ -83,7 +84,7 @@ def main(cfg):
             torch.save(features, f"data/features/{cfg.dataset.name}/train_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
             torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
     
-    # Estrazione delle caratteristiche dal dataset di validazione
+    # validation features extraction
     features, labels = extract_features(model, val_loader, cfg.device)
     if cfg.original_model==True:
         torch.save(features, f"data/features/{cfg.dataset.name}/val_features_original.pt")
@@ -96,7 +97,7 @@ def main(cfg):
             torch.save(features, f"data/features/{cfg.dataset.name}/val_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
             torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
 
-    # Estrazione delle caratteristiche dal dataset di test
+    # test features extraction
     features, labels = extract_features(model, test_loader, cfg.device)
     if cfg.golden_model==True:
         torch.save(features, f"data/features/{cfg.dataset.name}/test_features_only_retain_forgetting_{cfg.forgetting_set}.pt")

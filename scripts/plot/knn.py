@@ -93,12 +93,12 @@ def main(cfg):
         test_labels = torch.load('data/features/cifar10/test_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
     else:
         if cfg.orignal_model==True:
-        train_features = torch.load('data/features/cifar10/train_features_original.pt')
-        train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
-        validation_features = torch.load('data/features/cifar10/val_features_original.pt')
-        validation_labels = torch.load('data/features/cifar10/val_labels_original.pt')
-        test_features = torch.load('data/features/cifar10/test_features_original.pt')
-        test_labels = torch.load('data/features/cifar10/test_labels_original.pt')
+            train_features = torch.load('data/features/cifar10/train_features_original.pt')
+            train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
+            validation_features = torch.load('data/features/cifar10/val_features_original.pt')
+            validation_labels = torch.load('data/features/cifar10/val_labels_original.pt')
+            test_features = torch.load('data/features/cifar10/test_features_original.pt')
+            test_labels = torch.load('data/features/cifar10/test_labels_original.pt')
         else:
             train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
             train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')

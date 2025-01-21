@@ -64,7 +64,7 @@ class IcusUnlearningDataset(Dataset):
 
 
 def get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset): 
-    if unlearning_method_name == 'icus':
+    if unlearning_method_name == 'icus' or unlearning_method_name == 'icus_hierarchy':
         num_classes = cfg.dataset.classes
         infgt = torch.tensor([1 if i in forgetting_subset else 0 for i in range(len(train))])  
         unlearning_train = IcusUnlearningDataset(cfg.dataset.name, cfg.unlearn.nlayers, infgt, model, num_classes, cfg.device)

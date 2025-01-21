@@ -91,19 +91,19 @@ def main(cfg):
 
             _, predicted = y_pred.max(1)
 
-            # Totale generico
+            # total and correct predictions
             total += y.size(0)
             correct += predicted.eq(y).sum().item()
 
-            # Filtra per il retain set e forget set
+            # filtering retain and forget set
             for idx in range(y.size(0)):
                 if y[idx].item() in cfg.forgetting_set:
-                    # Dati relativi al forget set
+                    # forget set data
                     total_forget += 1
                     if predicted[idx].item() == y[idx].item():
                         correct_forget += 1
                 else:
-                    # Dati relativi al retain set
+                    # retain set data
                     total_retain += 1
                     if predicted[idx].item() == y[idx].item():
                         correct_retain += 1
@@ -113,7 +113,7 @@ def main(cfg):
         retain_acc = 100 * correct_retain / total_retain if total_retain > 0 else 0.0
         forget_acc = 100 * correct_forget / total_forget if total_forget > 0 else 0.0
 
-        # Log dei risultati
+        # results logging
         wandb_logger.log_metrics({
             "test_loss": test_loss,
             "test_acc": test_acc,

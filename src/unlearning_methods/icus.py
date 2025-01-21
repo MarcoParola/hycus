@@ -3,11 +3,13 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
+import os
 import random
 import copy
+import json
 from torch.utils.data import DataLoader
 from src.unlearning_methods.base import BaseUnlearningMethod
-from src.utils import retrieve_weights
+from src.utils import retrieve_weights, get_numbers_from_superclass
 from src.metrics.metrics import compute_metrics
 
 class Autoencoder(nn.Module):
@@ -94,26 +96,25 @@ class JointAutoencoder(nn.Module):
 
 
 class Icus(BaseUnlearningMethod):
-    def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger=None):
+    def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):
         super().__init__(opt, model)
-        #self.fc = model.fc
         self.opt=opt
         self.orig_model = copy.deepcopy(self.model)
         self.wrapped_train_loader = wrapped_train_loader
         self.logger = logger
         self.description = wrapped_train_loader.dataset.descr
+        print("Description: ", self.description.size())
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
         print("Forgetting subset: ", self.forgetting_subset)
         self.weights = []
         self.orig_weights = []
-        #self.weights = [None] * self.opt.dataset.classes
         j=0
         for classe, weights, _, _ in wrapped_train_loader:
             for i in range(len(classe)):
-                #self.weights[j] = weights
                 self.weights.append(weights)
                 j+=1
+        print("Weights: ", self.weights.shape)
         self.orig_weights = copy.deepcopy(self.weights)
         self.device = opt.device
         #autoencoder
@@ -138,7 +139,6 @@ class Icus(BaseUnlearningMethod):
 
     
     def unlearn(self, model, unlearning_train, val_loader):
-        #self.model.fc[0].weight.requires_grad_(True) #INUTILE???
         self.current_step = 0
         for epoch in range(self.opt.unlearn.max_epochs):
             print("Epoch: ", epoch)
@@ -153,6 +153,7 @@ class Icus(BaseUnlearningMethod):
 
         running_loss = 0.0
         for batch in unlearning_train:
+            torch.cuda.empty_cache()
             targets, weights, descr, _ = batch
             weights, descr, targets = weights.to(self.device), descr.to(self.device), targets.to(self.device)
             
@@ -188,7 +189,8 @@ class Icus(BaseUnlearningMethod):
             # Backward pass
             self.descr_optimizer.zero_grad()
             self.weights_optimizer.zero_grad()
-
+            print(descr.dtype)
+            print(weights.dtype)
             loss.backward()
             self.descr_optimizer.step()  # Update autoencoder
             self.weights_optimizer.step() 
@@ -197,7 +199,7 @@ class Icus(BaseUnlearningMethod):
 
         print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
         self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
-        if epoch%100 == 0:
+        if epoch%100 == 0 or epoch == self.opt.unlearn.max_epochs-1:
             self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
         
 
@@ -228,6 +230,13 @@ class Icus(BaseUnlearningMethod):
                 w = self.joint_ae.ae_w.decode(latent_d)
             else:
                 w = self.joint_ae.ae_w.decode(latent_w)
+            print("Epoch: ", epoch)
+            print("Max epoch: ", self.opt.unlearn.max_epochs)
+            print("current directory: ", os.getcwd())
+            if epoch == self.opt.unlearn.max_epochs-1:
+                print("Saving weights")
+                os.makedirs("weights/forgetting_set_"+str(self.opt.forgetting_set), exist_ok=True)
+                torch.save(w, f"weights/forgetting_set_{self.opt.forgetting_set}/weights_{i}.pt")
             if 1 in self.opt.unlearn.nlayers: 
                 distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
                 shared_part = w[self.model.model.fc[0].weight.size(1) + 1:]
@@ -248,3 +257,69 @@ class Icus(BaseUnlearningMethod):
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
         print("Accuracy forget ", metrics['accuracy_forgetting'])
         print("Accuracy retain ", metrics['accuracy_retaining'])
+
+
+class IcusHierarchy(Icus):
+    def __init__(self, semantic_dict, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):
+        super().__init__(opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger)
+        self.semantic_dict = semantic_dict
+        self.logger = logger
+    
+
+    def train_one_epoch(self, unlearning_train, val_loader, epoch):
+        print("Train epoch start")
+        self.joint_ae.train()  # Joint Autoencoder in training mode
+        self.model.model.fc.train()  # Model in training mode
+
+        running_loss = 0.0
+        for batch in unlearning_train:
+            targets, weights, descr, _ = batch
+            weights, descr, targets = weights.to(self.device), descr.to(self.device), targets.to(self.device)
+
+            descr = descr.view(descr.size(0), -1)
+            # Update the weights of the model
+            for i in self.forgetting_subset:
+                if self.opt.forgetting_set_strategy == "random_values":
+                    if targets == i:
+                        weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                elif self.opt.forgetting_set_strategy == "random_class":
+                    if 1 not in self.opt.unlearn.nlayers:
+                        weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                    else:
+                        list_of_superclass = get_numbers_from_superclass(i, self.semantic_dict)
+                        if list_of_superclass == []:
+                            j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
+                        else:
+                            j = random.choice(list_of_superclass)
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1] = weights[j][:self.model.model.fc[0].weight.data[i].size(0) + 1]
+                        torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
+                elif self.opt.forgetting_set_strategy == "zeros":
+                    if targets == i:
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1] = torch.zeros_like(weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1], requires_grad=True)
+                        torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
+                else:
+                    raise ValueError("Invalid forgetting set strategy")
+
+            weights.requires_grad_(True)
+            descr.requires_grad_(True)
+            
+            # Forward pass
+            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
+
+            loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight)
+            self.logger.log_metrics({"loss": loss.item()}, step=self.current_step)
+
+            # Backward pass
+            self.descr_optimizer.zero_grad()
+            self.weights_optimizer.zero_grad()
+
+            loss.backward()
+            self.descr_optimizer.step()  # Update autoencoder
+            self.weights_optimizer.step() 
+
+            running_loss += loss.item()
+
+        print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
+        self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
+        if epoch%100 == 0:
+            self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
