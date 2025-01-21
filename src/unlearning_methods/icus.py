@@ -103,7 +103,6 @@ class Icus(BaseUnlearningMethod):
         self.wrapped_train_loader = wrapped_train_loader
         self.logger = logger
         self.description = wrapped_train_loader.dataset.descr
-        #print("Description: ", self.description.size())
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
         print("Forgetting subset: ", self.forgetting_subset)
@@ -114,7 +113,7 @@ class Icus(BaseUnlearningMethod):
             for i in range(len(classe)):
                 self.weights.append(weights)
                 j+=1
-        #print("Weights: "+ str(len(self.weights))+" per " +str(len(self.weights[0])))
+        
         self.orig_weights = copy.deepcopy(self.weights)
         self.device = opt.device
         #autoencoder
