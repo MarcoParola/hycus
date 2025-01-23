@@ -173,5 +173,5 @@ wandb/
 *.log
 *.pth
 *.png
-
+*.pt
 /federico

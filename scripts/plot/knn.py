@@ -73,7 +73,7 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
         )
     })
 
-@hydra.main(config_path='../config', config_name='config', version_base=None)
+@hydra.main(config_path='../../config', config_name='config', version_base=None)
 def main(cfg):
     # Converte la configurazione in un dizionario
     config_dict = OmegaConf.to_container(cfg, resolve=True)
@@ -92,7 +92,7 @@ def main(cfg):
         test_features = torch.load('data/features/cifar10/test_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
         test_labels = torch.load('data/features/cifar10/test_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
     else:
-        if cfg.orignal_model==True:
+        if cfg.original_model==True:
             train_features = torch.load('data/features/cifar10/train_features_original.pt')
             train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
             validation_features = torch.load('data/features/cifar10/val_features_original.pt')

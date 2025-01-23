@@ -39,8 +39,8 @@
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.9329,
               "accuracy_forget": 0.0,
-              "acmd": 0.06316,
-              "wacmd": 0.0087
+              "acmd": 0.02708,
+              "wacmd": 0.0071
             },
             {
               "forgetting_set": [3, 4, 5],
@@ -150,8 +150,8 @@
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.809,
               "accuracy_forget": 0.05367,
-              "acmd": 0.10144,
-              "wacmd": 0.0108
+              "acmd": 0.04462,
+              "wacmd": 0.0044
             },
             {
               "forgetting_set": [3, 4, 5],
@@ -211,8 +211,8 @@
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.9313,
               "accuracy_forget": 0.0836,
-              "acmd": 0.07518,
-              "wacmd": 0.0105
+              "acmd": 0.05004,
+              "wacmd": 0.0108
             },
             {
               "forgetting_set": [3, 4, 5],
@@ -395,17 +395,19 @@
               "accuracy_forget":0.0005
             },
             {
-              "forgetting_set":[1,4,5],
-              "accuracy_retain":0.9541,
-              "accuracy_forget":0.0003
+              "forgetting_set": [1, 4, 5],
+              "accuracy_retain": 0.9541,
+              "accuracy_forget": 0.0003,
+              "acmd": 0.04462,
+              "wacmd": 0.0044
             },
             {
-              "forgetting_set":[3,4,5],
+              "forgetting_set":[3, 4, 5],
               "accuracy_retain":0.9679,
               "accuracy_forget":0.001
             },
             {
-              "forgetting_set":[0,6,8],
+              "forgetting_set":[0, 6, 8],
               "accuracy_retain":0.9339,
               "accuracy_forget":0.0017
             }
@@ -453,6 +455,13 @@
               "accuracy_forget": 0.013,
               "acmd": 0.001656,
               "wacmd": 0.0003
+            },
+            {
+              "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
+              "accuracy_retain": 0.7743,
+              "accuracy_forget": 0.02,
+              "acmd": 0.001522,
+              "wacmd": 0.0002
             },
             {
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
@@ -504,6 +513,13 @@
               "accuracy_retain": 0.7622,
               "accuracy_forget": 0.0,
               "acmd": 0.001872,
+              "wacmd": 0.0003
+            },
+            {
+              "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
+              "accuracy_retain": 0.7542,
+              "accuracy_forget": 0.0,
+              "acmd": 0.003846,
               "wacmd": 0.0003
             },
             {
@@ -559,6 +575,13 @@
               "wacmd": 0.0003
             },
             {
+              "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
+              "accuracy_retain": 0.7361,
+              "accuracy_forget": 0.021,
+              "acmd": 0.003846,
+              "wacmd": 0.0007
+            },
+            {
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
               "accuracy_retain": 0.7055,
               "accuracy_forget": 0.0515,
@@ -604,7 +627,9 @@
             {
               "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
               "accuracy_retain": 0.7904,
-              "accuracy_forget": 0.0
+              "accuracy_forget": 0.0,
+              "acmd": 0.001994,
+              "wacmd": 0.0003
             },
             {
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
@@ -663,6 +688,13 @@
               "accuracy_retain": 0.7741,
               "accuracy_forget": 0.016,
               "acmd": 0.001608,
+              "wacmd": 0.0002
+            },
+            {
+              "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
+              "accuracy_retain": 0.7749,
+              "accuracy_forget": 0.014,
+              "acmd": 0.001471,
               "wacmd": 0.0002
             },
             {

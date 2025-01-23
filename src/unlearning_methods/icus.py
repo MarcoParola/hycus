@@ -188,8 +188,6 @@ class Icus(BaseUnlearningMethod):
             # Backward pass
             self.descr_optimizer.zero_grad()
             self.weights_optimizer.zero_grad()
-            print(descr.dtype)
-            print(weights.dtype)
             loss.backward()
             self.descr_optimizer.step()  # Update autoencoder
             self.weights_optimizer.step() 
@@ -231,7 +229,6 @@ class Icus(BaseUnlearningMethod):
                 w = self.joint_ae.ae_w.decode(latent_w)
             print("Epoch: ", epoch)
             print("Max epoch: ", self.opt.unlearn.max_epochs)
-            print("current directory: ", os.getcwd())
             if epoch == self.opt.unlearn.max_epochs-1:
                 print("Saving weights")
                 os.makedirs("weights/forgetting_set_"+str(self.opt.forgetting_set), exist_ok=True)
