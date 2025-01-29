@@ -33,6 +33,14 @@
         {
           "forgetting_set": [1,4],
           "accuracy_retain": 0.93475
+        },
+        {
+          "forgetting_set": [2,4],
+          "accuracy_retain": 0.9351
+        },
+        {
+          "forgetting_set": [1,8],
+          "accuracy_retain": 0.924
         }
       ],
       "unlearning_methods": [
@@ -43,43 +51,61 @@
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.9329,
               "accuracy_forget": 0.0,
+              "aus": 1.017186,
               "acmd": 0.02708,
-              "wacmd": 0.0071
+              "wacmd": 0.0071,
+              "shannon": 0.19179,
+              "l2": 148126.0963
             },
             {
               "forgetting_set": [3, 4, 5],
               "accuracy_retain": 0.9434,
               "accuracy_forget": 0.0,
+              "aus": 1.0194,
               "acmd": 0.02636,
-              "wacmd": 0.0038
+              "wacmd": 0.0038,
+              "shannon": 0.16709,
+              "l2": 18962.17915
             },
             {
               "forgetting_set": [0, 6, 8],
               "accuracy_retain": 0.9009,
               "accuracy_forget": 0.0,
+              "aus": 0.97647,
               "acmd": 0.02336,
-              "wacmd": 0.0041
+              "wacmd": 0.0041,
+              "shannon": 0.205598,
+              "l2": 69863.72752
             },
             {
               "forgetting_set": [2, 4],
               "accuracy_retain": 0.9206,
               "accuracy_forget": 0.0,
+              "aus": 0.9855,
               "acmd": 0.01202,
-              "wacmd": 0.0013
+              "wacmd": 0.0013,
+              "shannon": 0.188688,
+              "l2": 81044.0647 
             },
             {
               "forgetting_set": [6, 9],
               "accuracy_retain": 0.9069,
               "accuracy_forget": 0.0,
+              "aus": 0.9829,
               "acmd": 0.01748,
-              "wacmd": 0.0022
+              "wacmd": 0.0022,
+              "shannon": 0.18764,
+              "l2": 81133.50739
             },
             {
               "forgetting_set": [3],
-              "accuracy_retain": 0.9175,
+              "accuracy_retain": 0.9238,
               "accuracy_forget": 0.0,
+              "aus": 0.9780,
               "acmd": 0.01186,
-              "wacmd": 0.0014
+              "wacmd": 0.0014,
+              "shannon": 0.170613,
+              "l2": 92134.96
             },
             {
               "forgetting_set": [8],
@@ -90,15 +116,21 @@
               "forgetting_set": [7],
               "accuracy_retain": 0.9053,
               "accuracy_forget": 0.0,
+              "aus": 0.98097,
               "acmd": 0.01626,
-              "wacmd": 0.0016
+              "wacmd": 0.0016,
+              "shannon": 0.17189,
+              "l2": 92403.2878
             },
             {
               "forgetting_set": [9],
               "accuracy_retain": 0.9022,
               "accuracy_forget": 0.0,
+              "aus": 0.97787,
               "acmd": 0.00904,
-              "wacmd": 0.0009
+              "wacmd": 0.0009,
+              "shannon": 0.17676,
+              "l2": 92224.4024
             },
             {
               "forgetting_set": [2, 8],
@@ -122,8 +154,9 @@
             },
             {
               "forgetting_set": [1, 8],
-              "accuracy_retain": 0.8946,
-              "accuracy_forget": 0.0
+              "accuracy_retain": 0.9069,
+              "accuracy_forget": 0.0,
+              "aus": 0.9829
             },
             {
               "forgetting_set": [4, 8],
@@ -154,57 +187,91 @@
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.809,
               "accuracy_forget": 0.05367,
+              "aus": 0.89872,
               "acmd": 0.04462,
-              "wacmd": 0.0044
+              "wacmd": 0.0044,
+              "shannon": 0.196216,
+              "l2": 129700.89756
             },
             {
               "forgetting_set": [3, 4, 5],
               "accuracy_retain": 0.8989,
               "accuracy_forget": 0.02967,
+              "aus": 0.9756,
               "acmd": 0.0303,
-              "wacmd": 0.0035
+              "wacmd": 0.0035,
+              "shannon": 0.166877,
+              "l2": 569.8262
             },
             {
               "forgetting_set": [0, 6, 8],
               "accuracy_retain": 0.8144,
               "accuracy_forget": 0.0,
+              "aus": 0.88997,
               "acmd": 0.05683,
-              "wacmd": 0.0073
+              "wacmd": 0.0073,
+              "shannon": 0.2308,
+              "l2": 51438.5348
             },
             {
               "forgetting_set": [2, 4],
               "accuracy_retain": 0.9192,
               "accuracy_forget": 0.0005,
+              "aus": 0.9841,
               "acmd": 0.01792,
-              "wacmd": 0.0021
+              "wacmd": 0.0021,
+              "shannon": 0.1998,
+              "l2": 68732.2776
             },
             {
               "forgetting_set": [6, 9],
               "accuracy_retain": 0.8994,
               "accuracy_forget": 0.0,
+              "aus": 0.9754,
               "acmd": 0.01758,
-              "wacmd": 0.0023
+              "wacmd": 0.0023,
+              "shannon": 0.196085,
+              "l2": 68799.3595
             },
             {
               "forgetting_set": [3],
               "accuracy_retain": 0.9346,
               "accuracy_forget": 0.0,
+              "aus": 0.9888,
               "acmd": 0.00834,
-              "wacmd": 0.0008
+              "wacmd": 0.0008,
+              "shannon": 0.175399,
+              "l2": 85958.94
             },
             {
               "forgetting_set": [7],
               "accuracy_retain": 0.9127,
               "accuracy_forget": 0.0,
+              "aus": 0.988367,
               "acmd": 0.01278,
-              "wacmd": 0.0013
+              "wacmd": 0.0013,
+              "shannon": 0.17555,
+              "l2": 86231.74
             },
             {
               "forgetting_set": [9],
               "accuracy_retain": 0.9176,
               "accuracy_forget": 0.065,
+              "aus": 0.99368,
               "acmd": 0.00826,
-              "wacmd": 0.0007
+              "wacmd": 0.0007,
+              "shannon": 0.17776,
+              "l2": 86061.8
+            },
+            {
+              "forgetting_set": [1,8],
+              "accuracy_retain": 0.8994,
+              "accuracy_forget": 0.042,
+              "aus": 0.9764,
+              "acmd": 0.0155,
+              "wacmd": 0.0019,
+              "shannon": 0.186517,
+              "l2": 170665.66
             }
           ]
         },
@@ -215,57 +282,91 @@
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.9313,
               "accuracy_forget": 0.0836,
+              "aus": 1.01438,
               "acmd": 0.05004,
-              "wacmd": 0.0108
+              "wacmd": 0.0108,
+              "shannon": 0.182156,
+              "l2": 114585.079
             },
             {
               "forgetting_set": [3, 4, 5],
               "accuracy_retain": 0.9427,
               "accuracy_forget": 0.114,
+              "aus": 1.01678,
               "acmd": 0.05246,
-              "wacmd": 0.0074
+              "wacmd": 0.0074,
+              "shannon": 0.160047,
+              "l2": 14579.58414
             },
             {
               "forgetting_set": [0, 6, 8],
               "accuracy_retain": 0.9171,
               "accuracy_forget": 0.2637,
+              "aus": 0.9942,
               "acmd": 0.05424,
-              "wacmd": 0.0084
+              "wacmd": 0.0084,
+              "shannon": 0.1878,
+              "l2": 30732.5614
             },
             {
               "forgetting_set": [2, 4],
               "accuracy_retain": 0.9319,
               "accuracy_forget": 0.042,
+              "aus": 0.99693,
               "acmd":0.02986,
-              "wacmd": 0.0046
+              "wacmd": 0.0046,
+              "shannon": 0.185876,
+              "l2": 41912.8898
             },
             {
               "forgetting_set": [6, 9],
               "accuracy_retain": 0.9153,
               "accuracy_forget": 0.0005,
+              "aus": 0.9913,
               "acmd": 0.03356,
-              "wacmd": 0.0075
+              "wacmd": 0.0075,
+              "shannon": 0.17933,
+              "l2": 42002.33244
             },
             {
               "forgetting_set": [3],
               "accuracy_retain": 0.9349,
               "accuracy_forget": 0.014,
+              "aus": 0.98927,
               "acmd": 0.01336,
-              "wacmd": 0.0018
+              "wacmd": 0.0018,
+              "shannon": 0.167495,
+              "l2": 53003.78
             },
             {
               "forgetting_set": [7],
               "accuracy_retain": 0.9201,
               "accuracy_forget": 0.004,
+              "aus": 0.99578,
               "acmd": 0.01596,
-              "wacmd": 0.0026
+              "wacmd": 0.0026,
+              "shannon": 0.169446,
+              "l2": 53272.108
             },
             {
               "forgetting_set": [9],
               "accuracy_retain": 0.9183,
               "accuracy_forget": 0.001,
+              "aus": 0.994,
               "acmd": 0.02742,
-              "wacmd": 0.0062
+              "wacmd": 0.0062,
+              "shannon": 0.1700346,
+              "l2": 53093.2228
+            },
+            {
+              "forgetting_set": [1,8],
+              "accuracy_retain": 0.9153,
+              "accuracy_forget": 0.0005,
+              "aus": 0.9913,
+              "acmd": 0.0385,
+              "wacmd": 0.0095,
+              "shannon": 0.1830267,
+              "l2": 158331.5099
             }
           ]
         },
@@ -291,8 +392,11 @@
               "forgetting_set": [3],
               "accuracy_retain": 0.7876,
               "accuracy_forget": 0.059,
+              "aus": 0.8506,
               "acmd": 0.06652,
-              "wacmd": 0.0086
+              "wacmd": 0.0086,
+              "shannon": 0.177086,
+              "l2": 92134.96
             },
             {
               "forgetting_set": [4],
@@ -313,8 +417,11 @@
               "forgetting_set": [7],
               "accuracy_retain": 0.8991,
               "accuracy_forget": 0.041,
+              "aus": 0.97576,
               "acmd": 0.01764,
-              "wacmd": 0.0016
+              "wacmd": 0.0016,
+              "shannon": 0.16992,
+              "l2": 92403.2876
             },
             {
               "forgetting_set": [8],
@@ -325,8 +432,11 @@
               "forgetting_set": [9],
               "accuracy_retain": 0.8792,
               "accuracy_forget": 0.008,
+              "aus": 0.9552,
               "acmd": 0.02742,
-              "wacmd": 0.0062
+              "wacmd": 0.0062,
+              "shannon": 0.16678,
+              "l2": 92224.4
             },
             {
               "forgetting_set": [1, 2],
@@ -353,15 +463,31 @@
               "forgetting_set": [2, 4],
               "accuracy_retain": 0.658,
               "accuracy_forget": 0.0,
+              "aus": 0.7229,
               "acmd": 0.06222,
-              "wacmd": 0.0099
+              "wacmd": 0.0099,
+              "shannon": 0.188637,
+              "l2": 81044.0654
             },
             {
               "forgetting_set": [6, 9],
               "accuracy_retain": 0.8679,
               "accuracy_forget": 0.0115,
+              "aus": 0.94454,
               "acmd": 0.03214,
-              "wacmd": 0.0072
+              "wacmd": 0.0072,
+              "shannon": 0.175,
+              "l2": 81133.507368
+            },
+            {
+              "forgetting_set": [1,8],
+              "accuracy_retain": 0.8679,
+              "accuracy_forget": 0.0115,
+              "aus": 0.94454,
+              "acmd": 0.04552,
+              "wacmd": 0.0092,
+              "shannon": 0.1774,
+              "l2": 170665.66
             }
           ]
         },
@@ -371,49 +497,92 @@
             {
               "forgetting_set": [3],
               "accuracy_retain": 0.9512,
-              "accuracy_forget": 0.0
+              "accuracy_forget": 0.0,
+              "aus": 1.0054,
+              "shannon": 0.15485,
+              "l2": 16734.86,
+              "acmd": 0.00522,
+              "wacmd":0.0006
             },
             {
               "forgetting_set": [7],
               "accuracy_retain":0.9322,
-              "accuracy_forget": 0.0
+              "accuracy_forget": 0.0,
+              "aus": 1.00787,
+              "shannon": 0.155137,
+              "l2": 16801.94,
+              "acmd": 0.00988,
+              "wacmd": 0.0009
             },
             {
               "forgetting_set":[9],
               "accuracy_retain":0.9328,
-              "accuracy_forget":0.0
+              "accuracy_forget":0.0,
+              "aus": 1.008467,
+              "shannon": 0.161115,
+              "l2": 16757.22,
+              "acmd":0.0047,
+              "wacmd":0.0006
             },
             {
               "forgetting_set":[1,8],
               "accuracy_retain":0.9396,
-              "accuracy_forget":0.0
+              "accuracy_forget":0.0,
+              "aus": 1.0156,
+              "acmd":0.00568,
+              "wacmd":0.0011,
+              "shannon": 0.15043588,
+              "l2": 103516.55
             },
             {
               "forgetting_set":[2,4],
               "accuracy_retain":0.9328,
-              "accuracy_forget":0.0
+              "accuracy_forget":0.0,
+              "aus": 0.9977,
+              "shannon": 0.158698,
+              "l2": 13962.15487,
+              "acmd":0.01037,
+              "wacmd":0.0012
             },
             {
               "forgetting_set":[6,9],
               "accuracy_retain":0.9458,
-              "accuracy_forget":0.0005
+              "accuracy_forget":0.0005,
+              "aus": 1.0218,
+              "shannon": 0.16304,
+              "l2": 13984.51547,
+              "acmd":0.01048,
+              "wacmd":0.0016
             },
             {
               "forgetting_set": [1, 4, 5],
               "accuracy_retain": 0.9541,
               "accuracy_forget": 0.0003,
-              "acmd": 0.04462,
-              "wacmd": 0.0044
+              "aus": 1.03837,
+              "acmd": 0.007,
+              "wacmd": 0.0012,
+              "shannon": 0.156972,
+              "l2": 89429.3246
             },
             {
               "forgetting_set":[3, 4, 5],
               "accuracy_retain":0.9679,
-              "accuracy_forget":0.001
+              "accuracy_forget":0.001,
+              "aus": 1.043856,
+              "acmd": 0.01533,
+              "wacmd": 0.0026,
+              "shannon": 0.095912,
+              "l2": 39668.00144
             },
             {
               "forgetting_set":[0, 6, 8],
               "accuracy_retain":0.9339,
-              "accuracy_forget":0.0017
+              "accuracy_forget":0.0017,
+              "acmd":0.01534,
+              "wacmd":0.0026,
+              "aus": 1.009455,
+              "shannon": 0.1631,
+              "l2": 11167.0993
             }
           ]
         }
@@ -423,11 +592,11 @@
       "original_model": [
         {
           "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
-          "accuracy_retain": 0.7844286
+          "accuracy_retain": 0.7844
         },
         {
           "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
-          "accuracy_retain": 0.8078571
+          "accuracy_retain": 0.8079
         },
         {
           "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
@@ -435,11 +604,19 @@
         },
         {
           "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
-          "accuracy_retain": 0.7825556
+          "accuracy_retain": 0.7825
         },
         {
           "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
           "accuracy_retain": 0.7734
+        },
+        {
+          "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
+          "accuracy_retain": 0.7891
+        },
+        {
+          "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
+          "accuracy_retain": 0.8094
         },
         {
           "forgetting_set": [32,73,62,70,86,87,6,7,3,88,17,37,23,33,15,38,45,77,11,35,27,29,65,74,56,59,8,13,41,69],
@@ -447,7 +624,7 @@
         },
         {
           "forgetting_set": [4,1,54,9,0,22,5,6,3,12,23,15,34,26,2,27,36,47,8,41],
-          "accuracy_retain": 0.77975
+          "accuracy_retain": 0.7797
         }
       ],
       "unlearning_methods": [
@@ -458,6 +635,7 @@
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
               "accuracy_retain": 0.7997,
               "accuracy_forget": 0.0075,
+              "aus":0.9829,
               "acmd": 0.001564,
               "wacmd": 0.0003
             },
@@ -465,6 +643,7 @@
               "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
               "accuracy_retain": 0.7731,
               "accuracy_forget": 0.01,
+              "aus": 0.9898,
               "acmd": 0.001656,
               "wacmd": 0.0003
             },
@@ -472,6 +651,7 @@
               "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
               "accuracy_retain": 0.7743,
               "accuracy_forget": 0.02,
+              "aus": 0.9659,
               "acmd": 0.001522,
               "wacmd": 0.0002
             },
@@ -486,6 +666,7 @@
               "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
               "accuracy_retain": 0.786,
               "accuracy_forget": 0.012,
+              "aus": 0.9897,
               "acmd": 0.001834,
               "wacmd": 0.0003
             },
@@ -493,6 +674,7 @@
               "forgetting_set": [32,73,62,70,86,87,6,7,3,88,17,37,23,33,15,38,45,77,11,35,27,29,65,74,56,59,8,13,41,69],
               "accuracy_retain": 0.8131,
               "accuracy_forget": 0.004,
+              "aus": 0.9944,
               "acmd": 0.00168,
               "wacmd": 0.0003
             },
@@ -500,6 +682,7 @@
               "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
               "accuracy_retain": 0.8117,
               "accuracy_forget": 0.0073,
+              "aus": 0.9965,
               "acmd": 0.001725,
               "wacmd": 0.0003
             },
@@ -507,6 +690,7 @@
               "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
               "accuracy_retain": 0.7833,
               "accuracy_forget": 0.013,
+              "aus":0.9880,
               "acmd": 0.001154,
               "wacmd": 0.0002
             },
@@ -514,7 +698,8 @@
               "forgetting_set": [4,1,54,9,0,22,5,6,3,12,23,15,34,26,2,27,36,47,8,41],
               "accuracy_retain": 0.77975,
               "accuracy_forget": 0.013,
-              "acmd": 0.002846,
+              "aus": 0.9872,
+              "acmd": 0.001448,
               "wacmd": 0.0002
             }
           ]
@@ -526,6 +711,7 @@
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
               "accuracy_retain": 0.7839,
               "accuracy_forget": 0.0,
+              "aus":0.9745,
               "acmd": 0.001952,
               "wacmd": 0.0003
             },
@@ -533,6 +719,7 @@
               "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
               "accuracy_retain": 0.7622,
               "accuracy_forget": 0.0,
+              "aus": 0.9888,
               "acmd": 0.001872,
               "wacmd": 0.0003
             },
@@ -540,6 +727,7 @@
               "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
               "accuracy_retain": 0.7542,
               "accuracy_forget": 0.0,
+              "aus": 0.9651,
               "acmd": 0.003846,
               "wacmd": 0.0003
             },
@@ -547,6 +735,7 @@
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
               "accuracy_retain": 0.7695,
               "accuracy_forget": 0.0005,
+              "aus":0.9844,
               "acmd":0.002016,
               "wacmd":0.0003
             },
@@ -554,6 +743,7 @@
               "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
               "accuracy_retain": 0.7624,
               "accuracy_forget": 0.00066,
+              "aus": 0.9774,
               "acmd": 0.002448,
               "wacmd": 0.0004
             },
@@ -561,6 +751,7 @@
               "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
               "accuracy_retain": 0.7947,
               "accuracy_forget": 0.002,
+              "aus": 0.9848,
               "acmd": 0.00205,
               "wacmd": 0.0004
             },
@@ -568,6 +759,7 @@
               "forgetting_set": [32,73,62,70,86,87,6,7,3,88,17,37,23,33,15,38,45,77,11,35,27,29,65,74,56,59,8,13,41,69],
               "accuracy_retain": 0.7605,
               "accuracy_forget": 0.0015,
+              "aus": 0.9444,
               "acmd": 0.00236,
               "wacmd": 0.0004
             },
@@ -575,6 +767,7 @@
               "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
               "accuracy_retain": 0.7682,
               "accuracy_forget": 0.0,
+              "aus":0.9857,
               "acmd": 0.001604,
               "wacmd": 0.0002
             },
@@ -582,6 +775,7 @@
               "forgetting_set": [4,1,54,9,0,22,5,6,3,12,23,15,34,26,2,27,36,47,8,41],
               "accuracy_retain": 0.7605,
               "accuracy_forget": 0.0015,
+              "aus":0.9793,
               "acmd": 0.00194,
               "wacmd": 0.0003
             }
@@ -594,6 +788,7 @@
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
               "accuracy_retain": 0.7055,
               "accuracy_forget": 0.062,
+              "aus":0.8438,
               "acmd": 0.006555,
               "wacmd": 0.0012
             },
@@ -601,6 +796,7 @@
               "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
               "accuracy_retain": 0.7383,
               "accuracy_forget": 0.084,
+              "aus": 0.88676,
               "acmd": 0.001655,
               "wacmd": 0.0003
             },
@@ -608,6 +804,7 @@
               "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
               "accuracy_retain": 0.7361,
               "accuracy_forget": 0.021,
+              "aus": 0.9275,
               "acmd": 0.003846,
               "wacmd": 0.0007
             },
@@ -615,6 +812,7 @@
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
               "accuracy_retain": 0.7055,
               "accuracy_forget": 0.0515,
+              "aus": 0.876,
               "acmd": 0.005984,
               "wacmd": 0.0012
             },
@@ -622,6 +820,7 @@
               "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
               "accuracy_retain": 0.6579,
               "accuracy_forget": 0.032,
+              "aus": 0.8464,
               "acmd": 0.008696,
               "wacmd": 0.0018
             },
@@ -629,6 +828,7 @@
               "forgetting_set": [32,73,62,70,86,87,6,7,3,88,17,37,23,33,15,38,45,77,11,35,27,29,65,74,56,59,8,13,41,69],
               "accuracy_retain": 0.6691,
               "accuracy_forget": 0.118,
+              "aus": 0.7642,
               "acmd": 0.008778,
               "wacmd": 0.0017
             },
@@ -636,6 +836,7 @@
               "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
               "accuracy_retain": 0.6653,
               "accuracy_forget": 0.044,
+              "aus": 0.8213,
               "acmd": 0.008656,
               "wacmd": 0.0017
             },
@@ -643,6 +844,7 @@
               "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
               "accuracy_retain": 0.7301,
               "accuracy_forget": 0.002,
+              "aus":0.9457,
               "acmd": 0.004002,
               "wacmd": 0.0008
             },
@@ -650,6 +852,7 @@
               "forgetting_set": [4,1,54,9,0,22,5,6,3,12,23,15,34,26,2,27,36,47,8,41],
               "accuracy_retain": 0.69488,
               "accuracy_forget": 0.1345,
+              "aus": 0.8067,
               "acmd": 0.006236,
               "wacmd": 0.0012
             }
@@ -662,62 +865,73 @@
               "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
               "accuracy_retain": 0.7952,
               "accuracy_forget": 0.0,
-              "acmd": 0.001604,
-              "wacmd": 0.0002
+              "aus":1.0127,
+              "acmd": 0.01042,
+              "wacmd": 0.0006
             },
             {
               "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
               "accuracy_retain": 0.7904,
               "accuracy_forget": 0.0,
-              "acmd": 0.001994,
-              "wacmd": 0.0003
+              "aus": 1.0013,
+              "acmd": 0.010636,
+              "wacmd": 0.0006
             },
             {
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
               "accuracy_retain": 0.7783,
               "accuracy_forget": 0.0,
-              "acmd": 0.001952,
-              "wacmd": 0.0003
+              "aus":0.9689,
+              "acmd": 0.0113,
+              "wacmd": 0.0008
             },
             {
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
               "accuracy_retain": 0.758,
-              "accuracy_forget": 0.0
+              "accuracy_forget": 0.0,
+              "aus":0.9734,
+              "acmd": 0.011008,
+              "wacmd": 0.0008
             },
             {
               "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
               "accuracy_retain": 0.7987,
               "accuracy_forget": 0.0007,
-              "acmd": 0.002448,
-              "wacmd": 0.0004
+              "aus": 1.0136,
+              "acmd": 0.011706,
+              "wacmd": 0.0011
             },
             {
               "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
               "accuracy_retain": 0.8236,
               "accuracy_forget": 0.0003,
-              "acmd": 0.002448,
-              "wacmd": 0.0004
+              "aus": 1.0154,
+              "acmd": 0.011644,
+              "wacmd": 0.0010
             },
             {
               "forgetting_set": [4,1,54,9,0,22,5,6,3,12,23,15,34,26,2,27,36,47,8,41],
-              "accuracy_retain": 0.788625,
+              "accuracy_retain": 0.7654,
               "accuracy_forget": 0.0,
-              "acmd": 0.00194,
-              "wacmd": 0.0003
+              "aus": 0.9857,
+              "acmd": 0.011282,
+              "wacmd": 0.0009
             },
             {
               "forgetting_set": [32,73,62,70,86,87,6,7,3,88,17,37,23,33,15,38,45,77,11,35,27,29,65,74,56,59,8,13,41,69],
               "accuracy_retain": 0.8261,
               "accuracy_forget": 0.0007,
-              "acmd": 0.00236,
-              "wacmd": 0.0004
+              "aus": 1.0107,
+              "acmd": 0.01115,
+              "wacmd": 0.0010
             },
             {
               "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
               "accuracy_retain": 0.7464,
               "accuracy_forget": 0.0,
-              "acmd": 0.00194,
-              "wacmd": 0.0003
+              "aus": 0.973,
+              "acmd": 0.01064,
+              "wacmd": 0.0007
             }
           ]
         },
@@ -728,6 +942,7 @@
               "forgetting_set": [64,2,44,88,81,53,24,28,67,82,80,55,66,34,29,35,5,86,93,73],
               "accuracy_retain": 0.7997,
               "accuracy_forget": 0.0075,
+              "aus": 0.9829,
               "acmd": 0.002078,
               "wacmd": 0.0003
             },
@@ -735,6 +950,7 @@
               "forgetting_set": [4,22,49,51,63,68,72,79,88,93],
               "accuracy_retain": 0.7741,
               "accuracy_forget": 0.016,
+              "aus": 0.9849,
               "acmd": 0.001608,
               "wacmd": 0.0002
             },
@@ -742,6 +958,7 @@
               "forgetting_set": [62,59,70,6,78,9,55,53,49,2],
               "accuracy_retain": 0.7749,
               "accuracy_forget": 0.014,
+              "aus": 0.9721,
               "acmd": 0.001471,
               "wacmd": 0.0002
             },
@@ -749,6 +966,7 @@
               "forgetting_set": [9,23,38,40,48,51,52,60,61,64,68,70,77,78,81,84,89,90,93,98],
               "accuracy_retain": 0.7841,
               "accuracy_forget": 0.0085,
+              "aus":0.991,
               "acmd": 0.00238,
               "wacmd": 0.0004
             },
@@ -756,13 +974,15 @@
               "forgetting_set": [1,5,8,12,14,17,20,23,27,31,37,39,43,47,50,53,57,58,61,64,69,71,77,80,83,86,87,91,93,96],
               "accuracy_retain": 0.786,
               "accuracy_forget": 0.012,
-              "acmd": 0.00262,
+              "aus": 0.9913,
+              "acmd": 0.00238,
               "wacmd": 0.0004
             },
             {
               "forgetting_set": [32,73,62,70,86,87,6,7,3,88,17,37,23,33,15,38,45,77,11,35,27,29,65,74,56,59,8,13,41,69],
               "accuracy_retain": 0.7957,
               "accuracy_forget": 0.022,
+              "aus": 0.9560,
               "acmd": 0.002472,
               "wacmd": 0.0004
             },
@@ -770,13 +990,15 @@
               "forgetting_set": [2,6,9,11,13,15,18,20,22,26,28,33,36,40,44,47,52,55,58,61,67,69,74,78,83,85,88,90,92,94],
               "accuracy_retain": 0.8117,
               "accuracy_forget": 0.0073,
-              "acmd": 0.00205,
+              "aus": 0.9965,
+              "acmd": 0.002448,
               "wacmd": 0.0004
             },
             {
               "forgetting_set": [4,11,19,26,40,55,62,68,89,93],
               "accuracy_retain": 0.7841,
               "accuracy_forget": 0.015,
+              "aus": 0.9868,
               "acmd": 0.001154,
               "wacmd": 0.0002
             },
@@ -789,6 +1011,7 @@
               "forgetting_set": [4,1,54,9,0,22,5,6,3,12,23,15,34,26,2,27,36,47,8,41],
               "accuracy_retain": 0.75438,
               "accuracy_forget": 0.021,
+              "aus": 0.9546,
               "acmd": 0.002846,
               "wacmd": 0.0005
             }

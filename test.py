@@ -27,6 +27,8 @@ def main(cfg):
 
     if cfg.golden_model:
         model.load_state_dict(torch.load('checkpoints/'+cfg.dataset.name+'_'+cfg.model+'_only_retain_set'+str(cfg.forgetting_set)+'.pth'))  # Carica i pesi dal file .pth
+    elif cfg.original_model:
+        model.load_state_dict(torch.load('checkpoints/'+cfg.dataset.name+'_'+cfg.model+'.pth')) 
     else:
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{str(cfg.forgetting_set)}_{cfg.unlearning_method}_{cfg.model}.pth")
         model.load_state_dict(torch.load(weights, map_location=cfg.device))

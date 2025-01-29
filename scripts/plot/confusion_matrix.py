@@ -311,7 +311,7 @@ def main(cfg):
     
     #differenza tra golden e finetuning
     if cm12 is not None:
-        cm13 = difference_between_matrices(cm6, cm2)
+        cm13 = difference_between_matrices(cm6, cm12)
         cms.append(cm13)
         cm_aux=cm13
         print("Errore non pesato finetuning: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))

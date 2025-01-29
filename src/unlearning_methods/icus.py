@@ -94,6 +94,18 @@ class JointAutoencoder(nn.Module):
         
         return descr_from_descr, descr_from_weight, weight_from_weight, weight_from_descr, latent_descr, latent_weight
 
+def aggregate_shared(shared_parts, method):
+            stacked = torch.stack(shared_parts) 
+            if method == "mean":
+                return torch.mean(stacked, dim=0)
+            elif method == "min":
+                return torch.min(stacked, dim=0).values
+            elif method == "max":
+                return torch.max(stacked, dim=0).values
+            elif method == "median":
+                return torch.median(stacked, dim=0).values
+            else:
+                raise ValueError(f"Metodo di aggregazione '{method}' non supportato.")
 
 class Icus(BaseUnlearningMethod):
     def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):
@@ -212,7 +224,7 @@ class Icus(BaseUnlearningMethod):
         self.logger.log_metrics({"cosine_similarity loss": 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)).item()},step=self.current_step)
         return loss 
 
-
+    """
     def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
         self.model.eval()  # Set model in evaluation mode
         self.joint_ae.eval()  # Set autoencoder in evaluation mode
@@ -249,6 +261,51 @@ class Icus(BaseUnlearningMethod):
         nlayers = self.opt.unlearn.nlayers
         self.model.set_weights(distinct, shared, self.opt.dataset.classes, nlayers)
         metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
+        # Log delle metriche
+        self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
+        print("Accuracy forget ", metrics['accuracy_forgetting'])
+        print("Accuracy retain ", metrics['accuracy_retaining'])
+    """
+
+
+    def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
+        self.model.eval()
+        self.joint_ae.eval()
+        distinct = []
+        shared_parts = [] 
+        
+        for i in range(self.opt.dataset.classes):
+            _, w, d, _ = wrapped_loader.dataset[i]
+            d = d.view(-1)
+            latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
+            latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
+            
+            if self.opt.unlearn.reconstruct_from_d:
+                w = self.joint_ae.ae_w.decode(latent_d)
+            else:
+                w = self.joint_ae.ae_w.decode(latent_w)
+
+            """if epoch == self.opt.unlearn.max_epochs - 1:
+                print("Saving weights")
+                os.makedirs(f"weights/forgetting_set_{self.opt.forgetting_set}", exist_ok=True)
+                torch.save(w, f"weights/forgetting_set_{self.opt.forgetting_set}/weights_{i}.pt")"""
+            
+            if 1 in self.opt.unlearn.nlayers: 
+                distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
+                shared_parts.append(w[self.model.model.fc[0].weight.size(1) + 1:])
+            else:
+                shared_parts.append(w)
+        
+        aggregation_method = self.opt.unlearn.aggregation_method
+        shared = aggregate_shared(shared_parts, aggregation_method).to(self.opt.device)
+        
+        if distinct:
+            distinct = torch.stack(distinct).to(self.opt.device)
+        
+        nlayers = self.opt.unlearn.nlayers
+        self.model.set_weights(distinct, shared, self.opt.dataset.classes, nlayers)
+        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
+        
         # Log delle metriche
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
         print("Accuracy forget ", metrics['accuracy_forgetting'])

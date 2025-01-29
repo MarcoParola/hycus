@@ -43,6 +43,7 @@ unlearn:
   update_json: False
   reconstruct_from_d: False
   already_forgotten_classes: []
+  aggregation_method: mean
 
 train_iters: 999
 
