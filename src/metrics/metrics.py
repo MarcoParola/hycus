@@ -211,12 +211,17 @@ def main(cfg):
     """
 
     #Here for shannon divergence and l2 distance
-    if int(cfg.forgetting_set_size) > 2:
+    if cfg.dataset.name == "cifar100":
+        unlearning_method = ["icus", "scrub", "badT","icus_hierarchy","finetuning"]
+    elif cfg.dataset.name == "cifar10" and int(cfg.forgetting_set_size) > 2:
         unlearning_method = ["icus", "scrub", "badT","finetuning"]
+    elif cfg.dataset.name == "cifar10" and int(cfg.forgetting_set_size) <= 2:
+        unlearning_method = ["icus", "scrub", "ssd", "badT", "finetuning"]
     else:
-        unlearning_method = ["icus", "scrub","ssd", "badT","finetuning"]
+        raise ValueError("Not supported settings")
+    
     for u in unlearning_method:
-        l2_distance = calculate_l2_distance("checkpoints/"+cfg.dataset.name+"_"+cfg.model+"_only_retain_set"+str(cfg.forgetting_set)+".pth", "checkpoints/cifar10_forgetting_set_"+str(cfg.forgetting_set)+"_"+u+"_"+cfg.model+".pth")
+        l2_distance = calculate_l2_distance("checkpoints/"+cfg.dataset.name+"_"+cfg.model+"_only_retain_set"+str(cfg.forgetting_set)+".pth", "checkpoints/"+cfg.dataset.name+"_forgetting_set_"+str(cfg.forgetting_set)+"_"+u+"_"+cfg.model+".pth")
         print("L2 distance "+u+": ", l2_distance)
         shannon_divergence = calculate_shannon_divergence("data/features/"+cfg.dataset.name+"/test_features_"+u+"_"+str(cfg.forgetting_set)+".pt", "data/features/"+cfg.dataset.name+"/test_features_only_retain_forgetting_"+str(cfg.forgetting_set)+".pt")
         print("Shannon divergence "+u+": ", shannon_divergence)

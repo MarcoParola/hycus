@@ -109,6 +109,22 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.2, test_split=0.2):
         train = data
         val = val_data
         test = test_data
+    
+    # LFW dataset
+    elif dataset == 'lfw':    
+        transform = transforms.Compose([
+            transforms.ToTensor(),  # Converte in tensore
+            transforms.Normalize(mean=[0.5], std=[0.5])  # Normalizzazione opzionale
+        ])
+        data = torchvision.datasets.LFWPeople(root=data_dir, split='train', download=True, transform=transform)
+        val_data = torchvision.datasets.LFWPeople(root=data_dir, split='test', download=True, transform=transform)
+        test_data = torchvision.datasets.LFWPeople(root=data_dir, split='test', download=True, transform=transform)
+        num_train = len(data)
+        indices = list(range(num_train))
+        np.random.shuffle(indices)
+        train = data
+        val = val_data
+        test = test_data
 
     # CUB200 -> I don't know if this is the correct way to load the dataset
     elif dataset == 'cub':

@@ -28,7 +28,6 @@ def main(cfg):
     torch.cuda.empty_cache() 
     if cfg.seed == -1:
         random_data = os.urandom(4)
-        print("Random classes: ", random_data)
         seed = int.from_bytes(random_data, byteorder="big")
         cfg.seed = seed
     torch.manual_seed(cfg.seed)    
@@ -65,16 +64,14 @@ def main(cfg):
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     print("Compute classification metrics")
     num_classes = cfg.dataset.classes
-    #Forgetting set loading
     forgetting_subset = get_forgetting_subset(cfg.forgetting_set, cfg.dataset.classes, cfg.forgetting_set_size)
-    # Compute classification metrics of the original model
     metrics = compute_metrics(model, test_loader, num_classes, forgetting_subset)
     for k, v in metrics.items():
         print(f'{k}: {v}')
 
     # Plotting
-    pca, shared_limits = plot_features(model, test_loader, forgetting_subset, unlearned=False)
-    pca=plot_features_3d(model, test_loader, forgetting_subset)
+    pca, shared_limits = plot_features(cfg, model, test_loader, unlearned=False)
+    pca=plot_features_3d(cfg, model, test_loader)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -114,10 +111,9 @@ def main(cfg):
         retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
         new_model = unlearning_method.unlearn(model, unlearning_train, test_loader, forget_loader)
         forgetting_subset.extend(cfg.unlearn.already_forgotten_classes) 
-        print(forgetting_subset)
     
-    plot_features(new_model, test_loader, forgetting_subset, pca=pca, unlearned=True, shared_limits=shared_limits)
-    plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
+    plot_features(new_model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+    plot_features_3d(new_model, test_loader, pca, True)
     
     # Save new model
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
@@ -127,7 +123,7 @@ def main(cfg):
         if cfg.unlearning_method != 'icus':
             torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_'+ cfg.model + '.pth'))
         if cfg.unlearning_method == 'icus' and cfg.unlearn.reconstruct_from_d == False:
-            torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' +cfg.unlearn.aggregation_method+ '_'  + cfg.model + '.pth'))
+            torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path,"nuovi", cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' +cfg.unlearn.aggregation_method+ '_'  + cfg.model + '.pth'))
     
     # log metrics
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
@@ -136,8 +132,6 @@ def main(cfg):
             "forget_test_accuracy": metrics['accuracy_forgetting'],
             "step": 0
         })
-    print("Accuracy forget ", metrics['accuracy_forgetting'])
-    print("Accuracy retain ", metrics['accuracy_retaining'])
 
     if cfg.unlearn.update_json == True:
         with open("src/metrics/metrics.json", "r") as file:

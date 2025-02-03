@@ -14,13 +14,12 @@ from src.models.classifier import Classifier
 from scripts.descr_and_similarity import calculate_embeddings, calculate_dissimilarity
 from matplotlib.colors import TwoSlopeNorm
 
-# Funzione per calcolare la matrice di confusione
+# Function to compute the confusion matrix
 def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=False, device='cpu'):
     model.eval()  # Modalità di valutazione
     device = cfg.device
     model.to(device)
 
-    # Liste per raccogliere le etichette vere e le predizioni
     y_true = []
     y_pred = []
 
@@ -149,7 +148,6 @@ def calculate_weighted_cm_error(test_dataloader, cm, embeddings_dissimilarity, n
         for j in range(nclasses):
             error += embeddings_dissimilarity[i][j] * abs(cm[i][j])
     error = error / (nclasses*nclasses)
-    print("Weighted error: ", error)
     return error
 
 
@@ -269,8 +267,8 @@ def main(cfg):
         cm7 = difference_between_matrices(cm6, cm2)
         cms.append(cm7)
         cm_aux=cm7
-        print("Errore non pesato scrub: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
-        print("Errore pesato scrub: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        print("Unweighted error scrub: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted scrub: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
         names.append("golden-scrub")
 
     #differenza tra golden e ssd
@@ -278,8 +276,8 @@ def main(cfg):
         cm8 = difference_between_matrices(cm6, cm3)
         cms.append(cm8)
         cm_aux=cm8
-        print("Errore non pesato ssd: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
-        print("Errore pesato ssd: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        print("Unweighted error ssd: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error ssd: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
         names.append("golden-ssd")
 
     #differenza tra golden e badT
@@ -287,8 +285,8 @@ def main(cfg):
         cm9 = difference_between_matrices(cm6, cm4)
         cms.append(cm9)
         cm_aux=cm9
-        print("Errore non pesato badT: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
-        print("Errore pesato badT: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        print("Unweighted error badT: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error badT: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
         names.append("golden-badT")
 
     #differenza tra golden e icus
@@ -296,8 +294,8 @@ def main(cfg):
         cm10 = difference_between_matrices(cm6, cm5)
         cms.append(cm10)
         cm_aux=cm10
-        print("Errore non pesato icus: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
-        print("Errore pesato icus: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        print("Unweighted error icus: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error icus: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
         names.append("golden-icus")
     
     #differenza tra golden e icus hierarchy
@@ -305,8 +303,8 @@ def main(cfg):
         cm12 = difference_between_matrices(cm6, cm11)
         cms.append(cm12)
         cm_aux=cm12
-        print("Errore non pesato Icus hierarchy: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
-        print("Errore pesato Icus hierarchy: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        print("Unweighted error Icus hierarchy: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error Icus hierarchy: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
         names.append("golden-icus hierarchy")
     
     #differenza tra golden e finetuning
@@ -314,8 +312,8 @@ def main(cfg):
         cm13 = difference_between_matrices(cm6, cm12)
         cms.append(cm13)
         cm_aux=cm13
-        print("Errore non pesato finetuning: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
-        print("Errore pesato finetuning: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        print("Unweighted error finetuning: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error finetuning: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
         names.append("golden-finetuning")
 
     plot_multiple_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=len(names)//2)

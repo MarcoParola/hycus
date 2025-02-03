@@ -35,7 +35,7 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
             best_score = val_score
             best_k = k
 
-    print(f"Miglior valore di K: {best_k} con accuratezza {best_score:.2f}")
+    print(f"Bast K value: {best_k} accuracy {best_score:.2f}")
 
     # Allena il modello con il miglior valore di k
     knn = KNeighborsClassifier(n_neighbors=best_k)
@@ -44,12 +44,12 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
     # Predizioni sul set di test
     y_pred = knn.predict(X_test)
     test_accuracy = accuracy_score(y_test, y_pred)
-    print(f"Accuratezza sul test: {test_accuracy:.2f}")
+    print(f"Test accuracy: {test_accuracy:.2f}")
 
     # Calcolo delle metriche di classificazione
     precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred, average=None)
 
-    print("\nReport di classificazione:")
+    print("\nClassification report:")
     print(classification_report(y_test, y_pred))
 
     # Log su wandb

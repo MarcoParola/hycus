@@ -36,7 +36,7 @@ def svm_classifier(X_train, y_train, X_val, y_val, X_test, y_test):
             best_score = val_score
             best_c = c
 
-    print(f"Miglior valore di C: {best_c} con accuratezza {best_score:.2f} sulla validazione")
+    print(f"Best C value: {best_c} accuracy {best_score:.2f} on validation set")
 
     # Allena il modello con il miglior valore di C
     svm = LinearSVC(C=best_c)
@@ -45,8 +45,8 @@ def svm_classifier(X_train, y_train, X_val, y_val, X_test, y_test):
     # Predizioni sul set di test
     y_pred = svm.predict(X_test)
     test_accuracy = accuracy_score(y_test, y_pred)
-    print(f"Accuratezza sul test: {test_accuracy:.2f}")
-    print("\nReport di classificazione:")
+    print(f"Test accuracy: {test_accuracy:.2f}")
+    print("\nClassification report:")
     print(classification_report(y_test, y_pred))
 
     # Calcolo delle metriche di classificazione

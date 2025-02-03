@@ -4,13 +4,22 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.manifold import TSNE
+import hydra
 from datetime import datetime
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from src.datasets.dataset import load_dataset
+from src.models.classifier import Classifier
 
-def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=False): 
+
+def plot_features_3d(cfg, model, data_loader, pca=None, unlearned=False): 
     model.eval()  
 
     all_features = []
     all_labels = []
+
+    forgetting_subset = cfg.forgetting_set
 
     # Device setting
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,26 +84,36 @@ def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=
         ax.set_zlabel(f't-SNE Component {z_comp + 1}')
         ax.set_title(f't-SNE 3D - View {i}')
         ax.grid(True)
-        ax.legend(loc='best')  # Aggiungi la legenda qui
+        ax.legend(loc='best')  
 
     # Save the plot with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
-        plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
+        if cfg.unlearning_method=="icus":
+            plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
     else:
-        plt.savefig('fig/feature_plot_3d_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
-    
+        if cfg.golden_model==False:
+            if cfg.unlearning_method=="icus":
+                plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
+            else:
+                plt.savefig('fig/feature_plot_3d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_golden.png')
     # Show the plot
     plt.show()
     if not unlearned:
         return pca
 
 
-def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=False, shared_limits=None): 
+def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_limits=None): 
     model.eval()  
 
     all_features = []
     all_labels = []
+
+    forgetting_subset = cfg.forgetting_set
 
     # Device setting
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -166,9 +185,18 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
-        plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
+        if cfg.unlearning_method=="icus":
+            plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
     else:
-        plt.savefig('fig/feature_plot_3d_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
+        if cfg.golden_model==False:
+            if cfg.unlearning_method=="icus":
+                plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
+            else:
+                plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_'+str(forgetting_subset)+'_golden.png')
     plt.show()
 
     if not unlearned:

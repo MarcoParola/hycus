@@ -73,13 +73,6 @@ def main(cfg):
     print(f'Accuracy on retained set: {100 * total_correct_retain / total_retain:.2f}%')
     print(f'Accuracy on forgetting set: {100 * total_correct_forget / total_forget:.2f}%')
 
-    """
-    features, labels = extract_features(model, test_loader, cfg.device)
-    torch.save(features, f"data/features/"+cfg.dataset.name+"/only_retain_set_features"+str(cfg.forgetting_set)+".pt")
-    compute_confusion_matrix(model, test_loader, cfg)
-    """
-
 
 if __name__ == '__main__':
-    print('main')
     main()

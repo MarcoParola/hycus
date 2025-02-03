@@ -28,7 +28,6 @@ def calculate_dissimilarity_matrix(embeddings, device):
             if j!=i and dissimilarity_matrix[i][j]<minimum:
                 minimum=dissimilarity_matrix[i][j]
                 min_j=j
-        print("La classe ", i, " è più simile alla classe ", min_j, " con dissimilarità ", minimum)
     
     return dissimilarity_matrix
 
@@ -44,15 +43,12 @@ def main():
     # embeddings for dataset
     embeddings = calculate_embeddings("cifar100")
     embeddings = embeddings.to(device)  
-    print("Dimensione embeddings:", embeddings.shape)
 
     # flatten the embeddings
     flattened_embeddings = flatten_class_embeddings(embeddings)
-    print("Dimensione flattened_embeddings:", flattened_embeddings.shape)
 
     # calculate the dissimilarity matrix
     dissimilarity_matrix = calculate_dissimilarity_matrix(flattened_embeddings, device)
-    print("Dimensione dissimilarity_matrix:", dissimilarity_matrix.shape)
 
     # Plot the dissimilarity matrix
     fig, axes = plt.subplots(1, 1, figsize=(8, 6))  # 1 riga, 1 colonna

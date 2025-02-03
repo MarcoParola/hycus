@@ -63,10 +63,10 @@ def main(cfg):
         if cfg.original_model==True:
             weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_resnet.pth')
         else:
-            if cfg.golden_model==False:
-                weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set)+'_' +cfg.unlearning_method+'_'+ cfg.model + '.pth')
+            if cfg.unlearning_method=="icus":
+                weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set)+'_' +cfg.unlearning_method+"_"+ cfg.model + '.pth')
             else:
-                weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_resnet_only_retain_set'+str(cfg.forgetting_set)+'.pth')
+                weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set)+'_' +cfg.unlearning_method+'_'+ cfg.model + '.pth')
     
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     torch.grad = False
@@ -81,8 +81,12 @@ def main(cfg):
             torch.save(features, f"data/features/{cfg.dataset.name}/train_features_original.pt")
             torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_original.pt")
         else:
-            torch.save(features, f"data/features/{cfg.dataset.name}/train_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
-            torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+            if cfg.unlearning_method=="icus":
+                torch.save(features, f"data/features/{cfg.dataset.name}/train_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+                torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+            else:
+                torch.save(features, f"data/features/{cfg.dataset.name}/train_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+                torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
     
     # validation features extraction
     features, labels = extract_features(model, val_loader, cfg.device)
@@ -94,8 +98,12 @@ def main(cfg):
             torch.save(features, f"data/features/{cfg.dataset.name}/val_features_only_retain_forgetting_{cfg.forgetting_set}.pt")
             torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_only_retain_forgetting_{cfg.forgetting_set}.pt")
         else:
-            torch.save(features, f"data/features/{cfg.dataset.name}/val_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
-            torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+            if cfg.unlearning_method=="icus":
+                torch.save(features, f"data/features/{cfg.dataset.name}/val_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+                torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+            else:
+                torch.save(features, f"data/features/{cfg.dataset.name}/val_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+                torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
 
     # test features extraction
     features, labels = extract_features(model, test_loader, cfg.device)
@@ -107,8 +115,12 @@ def main(cfg):
             torch.save(features, f"data/features/{cfg.dataset.name}/test_features_original.pt")
             torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_original.pt")
         else:
-            torch.save(features, f"data/features/{cfg.dataset.name}/test_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
-            torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+            if cfg.unlearning_method=="icus":
+                torch.save(features, f"data/features/{cfg.dataset.name}/test_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+                torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+            else:
+                torch.save(features, f"data/features/{cfg.dataset.name}/test_features_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
+                torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_{cfg.unlearning_method}_{cfg.forgetting_set}.pt")
     
 if __name__ == '__main__':
     main()

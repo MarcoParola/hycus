@@ -104,7 +104,7 @@
               "aus": 0.9780,
               "acmd": 0.01186,
               "wacmd": 0.0014,
-              "shannon": 0.170613,
+              "shannon": 0.171428,
               "l2": 92134.96
             },
             {
@@ -153,10 +153,14 @@
               "accuracy_forget": 0.0
             },
             {
-              "forgetting_set": [1, 8],
+              "forgetting_set": [1,8],
               "accuracy_retain": 0.9069,
               "accuracy_forget": 0.0,
-              "aus": 0.9829
+              "aus": 0.9829,
+              "acmd": 0.0211,
+              "wacmd": 0.0051,
+              "l2": 170665.66,
+              "shannon": 0.18652
             },
             {
               "forgetting_set": [4, 8],
@@ -270,8 +274,8 @@
               "aus": 0.9764,
               "acmd": 0.0155,
               "wacmd": 0.0019,
-              "shannon": 0.186517,
-              "l2": 170665.66
+              "shannon": 0.18303,
+              "l2": 158331.51
             }
           ]
         },
@@ -302,7 +306,7 @@
               "forgetting_set": [0, 6, 8],
               "accuracy_retain": 0.9171,
               "accuracy_forget": 0.2637,
-              "aus": 0.9942,
+              "aus": 0.7855,
               "acmd": 0.05424,
               "wacmd": 0.0084,
               "shannon": 0.1878,
@@ -365,8 +369,8 @@
               "aus": 0.9913,
               "acmd": 0.0385,
               "wacmd": 0.0095,
-              "shannon": 0.1830267,
-              "l2": 158331.5099
+              "shannon": 0.1766556,
+              "l2": 131534.473
             }
           ]
         },
@@ -499,30 +503,30 @@
               "accuracy_retain": 0.9512,
               "accuracy_forget": 0.0,
               "aus": 1.0054,
-              "shannon": 0.15485,
-              "l2": 16734.86,
               "acmd": 0.00522,
-              "wacmd":0.0006
+              "wacmd":0.0006,
+              "shannon": 0.15485,
+              "l2": 16734.86
             },
             {
               "forgetting_set": [7],
               "accuracy_retain":0.9322,
               "accuracy_forget": 0.0,
               "aus": 1.00787,
-              "shannon": 0.155137,
-              "l2": 16801.94,
               "acmd": 0.00988,
-              "wacmd": 0.0009
+              "wacmd": 0.0009,
+              "shannon": 0.155137,
+              "l2": 16801.94
             },
             {
               "forgetting_set":[9],
               "accuracy_retain":0.9328,
               "accuracy_forget":0.0,
               "aus": 1.008467,
-              "shannon": 0.161115,
-              "l2": 16757.22,
               "acmd":0.0047,
-              "wacmd":0.0006
+              "wacmd":0.0006,
+              "shannon": 0.161115,
+              "l2": 16757.22
             },
             {
               "forgetting_set":[1,8],
@@ -539,10 +543,10 @@
               "accuracy_retain":0.9328,
               "accuracy_forget":0.0,
               "aus": 0.9977,
-              "shannon": 0.158698,
-              "l2": 13962.15487,
               "acmd":0.01037,
-              "wacmd":0.0012
+              "wacmd":0.0012,
+              "shannon": 0.158698,
+              "l2": 13962.15487
             },
             {
               "forgetting_set":[6,9],

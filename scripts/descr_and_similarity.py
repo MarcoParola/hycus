@@ -22,12 +22,6 @@ def calculate_embeddings(dataset_name):
             description.append(y) # append the class name if no description is found
         else:
             description.append(d)
-    """for i in range(len(description)):
-        if len(description[i])<30:
-            print(f'{i}: {description[i]}')
-        else:
-            print(f'{i}: {description[i][:30]}...')"""
-            
         
     # Tokenize the list of words all together
     encoding = tokenizer.batch_encode_plus(

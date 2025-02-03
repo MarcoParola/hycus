@@ -125,29 +125,27 @@ class Classifier(torch.nn.Module):
                 if l == 1:
                     w = self.model.fc[0].weight.data  # Forma [10, 512]
                     bias = self.model.fc[0].bias.data  # Forma [10]
-
                     bias = bias.unsqueeze(1) 
-                    print("Bias shape:", bias.shape)
 
                     if distinct.numel() == 0: 
                         distinct = torch.cat([w, bias], dim=1)  
                     else:
                         distinct = torch.cat([distinct, w, bias], dim=1)
-                    print("Distinct shape:", distinct.shape)
+
                 elif l==2:
                     shared=torch.cat((shared, self.model.layer4[1].bn2.weight.data.view(-1)))
                     shared=torch.cat((shared, self.model.layer4[1].bn2.bias.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
                 elif l==3:
                     shared=torch.cat((shared, self.model.layer4[1].conv2.weight.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
                 elif l==4:
                     shared=torch.cat((shared, self.model.layer2[1].bn1.weight.data.view(-1)))
                     shared=torch.cat((shared, self.model.layer2[1].bn1.bias.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
                 elif l==5:
                     shared=torch.cat((shared, self.model.layer1[1].conv1.weight.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
         elif self.model_name == 'efficientnet_b0':
             pass
         

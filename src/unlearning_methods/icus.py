@@ -95,17 +95,17 @@ class JointAutoencoder(nn.Module):
         return descr_from_descr, descr_from_weight, weight_from_weight, weight_from_descr, latent_descr, latent_weight
 
 def aggregate_shared(shared_parts, method):
-            stacked = torch.stack(shared_parts) 
-            if method == "mean":
-                return torch.mean(stacked, dim=0)
-            elif method == "min":
-                return torch.min(stacked, dim=0).values
-            elif method == "max":
-                return torch.max(stacked, dim=0).values
-            elif method == "median":
-                return torch.median(stacked, dim=0).values
-            else:
-                raise ValueError(f"Metodo di aggregazione '{method}' non supportato.")
+    stacked = torch.stack(shared_parts) 
+    if method == "mean":
+        return torch.mean(stacked, dim=0)
+    elif method == "min":
+        return torch.min(stacked, dim=0).values
+    elif method == "max":
+        return torch.max(stacked, dim=0).values
+    elif method == "median":
+        return torch.median(stacked, dim=0).values
+    else:
+        raise ValueError(f"Metodo di aggregazione '{method}' non supportato.")
 
 class Icus(BaseUnlearningMethod):
     def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):
@@ -117,7 +117,6 @@ class Icus(BaseUnlearningMethod):
         self.description = wrapped_train_loader.dataset.descr
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        print("Forgetting subset: ", self.forgetting_subset)
         self.weights = []
         self.orig_weights = []
         j=0
@@ -179,12 +178,12 @@ class Icus(BaseUnlearningMethod):
                         weights[i] = torch.randn_like(weights[i], requires_grad=True)
                     else:
                         j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
-                        weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1] = weights[j][:self.model.model.fc[0].weight.data[i].size(0) + 1]
-                        torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = weights[j][:self.model.model.fc[0].weight.data[i].size(0)]
+                        weights[i][self.model.model.fc[0].weight.data[i].size(0):] = torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0):])
                 elif self.opt.forgetting_set_strategy == "zeros":
                     if targets == i:
-                        weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1] = torch.zeros_like(weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1], requires_grad=True)
-                        torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = torch.zeros_like(weights[i][:self.model.model.fc[0].weight.data[i].size(0)], requires_grad=True)
+                        weights[i][self.model.model.fc[0].weight.data[i].size(0):] = torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0):])
                 else:
                     raise ValueError("Invalid forgetting set strategy")
             
@@ -208,7 +207,12 @@ class Icus(BaseUnlearningMethod):
 
         print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
         self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
-        if epoch%100 == 0 or epoch == self.opt.unlearn.max_epochs-1:
+        if self.opt.dataset.name=='cifar100':
+            interval_log=1500
+        else:
+            interval_log=100
+
+        if epoch % interval_log == 0 or epoch == self.opt.unlearn.max_epochs-1:
             self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
         
 
@@ -223,49 +227,6 @@ class Icus(BaseUnlearningMethod):
         self.logger.log_metrics({"att_from_weights_loss": nn.MSELoss()(descr, att_from_weight).item()},step=self.current_step)
         self.logger.log_metrics({"cosine_similarity loss": 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)).item()},step=self.current_step)
         return loss 
-
-    """
-    def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
-        self.model.eval()  # Set model in evaluation mode
-        self.joint_ae.eval()  # Set autoencoder in evaluation mode
-        distinct = []
-        shared = None 
-        for i in range(self.opt.dataset.classes):
-            _, w, d, _ = wrapped_loader.dataset[i]
-            d = d.view(-1)
-            latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
-            latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
-            if self.opt.unlearn.reconstruct_from_d == True:
-                w = self.joint_ae.ae_w.decode(latent_d)
-            else:
-                w = self.joint_ae.ae_w.decode(latent_w)
-            print("Epoch: ", epoch)
-            print("Max epoch: ", self.opt.unlearn.max_epochs)
-            if epoch == self.opt.unlearn.max_epochs-1:
-                print("Saving weights")
-                os.makedirs("weights/forgetting_set_"+str(self.opt.forgetting_set), exist_ok=True)
-                torch.save(w, f"weights/forgetting_set_{self.opt.forgetting_set}/weights_{i}.pt")
-            if 1 in self.opt.unlearn.nlayers: 
-                distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
-                shared_part = w[self.model.model.fc[0].weight.size(1) + 1:]
-            else:
-                shared_part = w
-            if shared is None:
-                shared = shared_part.clone()
-            else:
-                shared += shared_part
-        shared = shared / self.opt.dataset.classes 
-        if distinct != []:
-            distinct = torch.stack(distinct).to(self.opt.device)
-        shared = shared.to(self.opt.device)
-        nlayers = self.opt.unlearn.nlayers
-        self.model.set_weights(distinct, shared, self.opt.dataset.classes, nlayers)
-        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
-        # Log delle metriche
-        self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
-        print("Accuracy forget ", metrics['accuracy_forgetting'])
-        print("Accuracy retain ", metrics['accuracy_retaining'])
-    """
 
 
     def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
@@ -284,11 +245,6 @@ class Icus(BaseUnlearningMethod):
                 w = self.joint_ae.ae_w.decode(latent_d)
             else:
                 w = self.joint_ae.ae_w.decode(latent_w)
-
-            """if epoch == self.opt.unlearn.max_epochs - 1:
-                print("Saving weights")
-                os.makedirs(f"weights/forgetting_set_{self.opt.forgetting_set}", exist_ok=True)
-                torch.save(w, f"weights/forgetting_set_{self.opt.forgetting_set}/weights_{i}.pt")"""
             
             if 1 in self.opt.unlearn.nlayers: 
                 distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
@@ -297,6 +253,9 @@ class Icus(BaseUnlearningMethod):
                 shared_parts.append(w)
         
         aggregation_method = self.opt.unlearn.aggregation_method
+        fs = self.opt.forgetting_set 
+        os.makedirs(f"shared_weights/forgetting_set_{fs}/{aggregation_method}", exist_ok=True)
+        torch.save(shared_parts, f"shared_weights/forgetting_set_{fs}/{aggregation_method}/shared_weights_epoch_{epoch}.pt")
         shared = aggregate_shared(shared_parts, aggregation_method).to(self.opt.device)
         
         if distinct:
@@ -308,8 +267,6 @@ class Icus(BaseUnlearningMethod):
         
         # Log delle metriche
         self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
-        print("Accuracy forget ", metrics['accuracy_forgetting'])
-        print("Accuracy retain ", metrics['accuracy_retaining'])
 
 
 class IcusHierarchy(Icus):
