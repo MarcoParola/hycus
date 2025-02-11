@@ -88,7 +88,7 @@ def main(cfg):
     wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project+'_svm', config=flat_config)
 
     # Caricamento dei dati
-    if cfg.golden_model==True: #Caso del golden model
+    if cfg.unlearning_method == 'retrain': #Caso del golden model
         train_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
         train_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
         validation_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
