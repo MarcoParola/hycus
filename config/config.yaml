@@ -16,9 +16,9 @@ golden_model: False
 original_model: False
 
 dataset: 
-  name: cifar100
+  name: cifar10
   path: ./data
-  classes: 100
+  classes: 10
   resize: 224
 
 device: "cuda"
@@ -33,7 +33,7 @@ train:
 
 unlearn:
   lr: 1e-4
-  max_epochs: 1000
+  max_epochs: 10000
   temp: 1
   scrub_steps: 7
   nlayers: [1,2]

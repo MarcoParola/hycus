@@ -165,12 +165,14 @@ def main(cfg):
         test_dataset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
     elif cfg.dataset.name == 'cifar100':
         test_dataset = torchvision.datasets.CIFAR100(root=data_dir, train=False, download=True, transform=transform)
+    elif cfg.dataset.name == 'lfw':
+        _, _, test_dataset = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
 
     # Crea il DataLoader per il test
     test_loader = DataLoader(test_dataset, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
     # Carica il modello
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 
     #ESEGUI PER SINGOLA CONFUSION MATRIX
@@ -211,12 +213,13 @@ def main(cfg):
         names.append("scrub")
 
     #ssd
-    weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_ssd_{cfg.model}.pth")
-    if os.path.exists(weights):
-        model.load_state_dict(torch.load(weights, map_location=cfg.device))
-        cm3 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-        cms.append(cm3)
-        names.append("ssd")
+    if cfg.forgetting_set_size < 3:
+        weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_ssd_{cfg.model}.pth")
+        if os.path.exists(weights):
+            model.load_state_dict(torch.load(weights, map_location=cfg.device))
+            cm3 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+            cms.append(cm3)
+            names.append("ssd")
 
     #badT
     weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_badT_{cfg.model}.pth")

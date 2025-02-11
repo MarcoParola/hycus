@@ -22,7 +22,7 @@ def main(cfg):
     test_loader = DataLoader(test, batch_size=32, shuffle=False)
 
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 
     if cfg.golden_model:

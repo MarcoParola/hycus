@@ -212,11 +212,13 @@ def main(cfg):
 
     #Here for shannon divergence and l2 distance
     if cfg.dataset.name == "cifar100":
-        unlearning_method = ["icus", "scrub", "badT","icus_hierarchy","finetuning"]
+        unlearning_method = ["icus", "scrub", "badT", "icus_hierarchy", "finetuning"]
     elif cfg.dataset.name == "cifar10" and int(cfg.forgetting_set_size) > 2:
         unlearning_method = ["icus", "scrub", "badT","finetuning"]
     elif cfg.dataset.name == "cifar10" and int(cfg.forgetting_set_size) <= 2:
         unlearning_method = ["icus", "scrub", "ssd", "badT", "finetuning"]
+    elif cfg.dataset.name == "lfw":
+        unlearning_method = ["icus", "scrub", "badT"]
     else:
         raise ValueError("Not supported settings")
     

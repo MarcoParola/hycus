@@ -2,12 +2,15 @@ import requests
 from transformers import BertModel, BertTokenizer
 import torch
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 def calculate_embeddings(dataset_name):
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased') # Load BERT tokenizer and model
     model = BertModel.from_pretrained('bert-base-uncased')
 
     # List of words to encode
-    if dataset_name=='cifar10' or dataset_name=='cifar100':
+    if dataset_name=='cifar10' or dataset_name=='cifar100' or dataset_name=='lfw':
         path = "data/"+dataset_name+"_classes.txt"
         classes = load_words_to_array(path)
     
@@ -43,9 +46,7 @@ def calculate_embeddings(dataset_name):
     return word_embeddings
         
 def load_words_to_array(file_path):
-    # Leggi le parole dal file di testo
     with open(file_path, 'r') as f:
-        # Rimuovi eventuali spazi bianchi e newline, e crea una lista di parole
         words = [line.strip() for line in f if line.strip()]
     return words
 
@@ -86,10 +87,22 @@ def calculate_dissimilarity(embeddings, device='cpu'):
     dissimilarity = 1 - torch.nn.functional.cosine_similarity(embeddings.unsqueeze(1), embeddings.unsqueeze(0), dim=2)
     return dissimilarity
 
+def visualize_dissimilarity_matrix(matrix, labels):
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(matrix.numpy(), xticklabels=labels, yticklabels=labels, cmap="coolwarm", annot=False, fmt=".2f")
+    plt.title("Dissimilarity Matrix")
+    plt.xlabel("Classes")
+    plt.ylabel("Classes")
+    plt.savefig("dissimilarity_matrix.png")
+
 def main():
-    embeddings = calculate_embeddings("cifar10")  
+    dataset_name = "cifar100"
+    embeddings = calculate_embeddings(dataset_name)  
     mean_embeddings = embeddings.mean(dim=1) 
     dissimilarity_matrix = calculate_dissimilarity(mean_embeddings) 
+    
+    class_labels = load_words_to_array(f"data/{dataset_name}_classes.txt")
+    visualize_dissimilarity_matrix(dissimilarity_matrix, class_labels)
 
 if __name__ == '__main__':
     main()

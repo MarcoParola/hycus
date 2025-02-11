@@ -1,10 +1,15 @@
 import torch
 import torchvision
+from sklearn.datasets import fetch_lfw_people
 import numpy as np
 from torchvision import transforms
 import os
+import sys
 import math
+from collections import defaultdict
+from torch.utils.data import Dataset, Subset
 from torch.utils.data import DataLoader
+from scripts.parse_agedb_dataset import retrieve_AgeDB_dataset
 
 
 class ImgTextDataset(torch.utils.data.Dataset):
@@ -111,20 +116,144 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.2, test_split=0.2):
         test = test_data
     
     # LFW dataset
-    elif dataset == 'lfw':    
-        transform = transforms.Compose([
-            transforms.ToTensor(),  # Converte in tensore
-            transforms.Normalize(mean=[0.5], std=[0.5])  # Normalizzazione opzionale
-        ])
-        data = torchvision.datasets.LFWPeople(root=data_dir, split='train', download=True, transform=transform)
-        val_data = torchvision.datasets.LFWPeople(root=data_dir, split='test', download=True, transform=transform)
-        test_data = torchvision.datasets.LFWPeople(root=data_dir, split='test', download=True, transform=transform)
-        num_train = len(data)
-        indices = list(range(num_train))
+    elif dataset == 'lfw':
+        data = fetch_lfw_people(
+            color=True,
+            resize=resize / 256,  # Imposta la risoluzione
+            min_faces_per_person=20  # Prendiamo tutte le classi senza filtro
+        )
+
+        images = torch.tensor(data.images).permute(0, 3, 1, 2).float()  # Converti le immagini in tensori
+        labels = torch.tensor(data.target)
+
+        print(f"[DEBUG] Numero totale di immagini: {len(images)}")
+        print(f"[DEBUG] Numero totale di classi: {len(np.unique(labels.numpy()))}")
+
+        # Raggruppa le immagini per classe
+        class_dict = defaultdict(list)
+        for img, lbl in zip(images, labels):
+            class_dict[lbl.item()].append(img)
+
+        # Inizializza liste per i set di train, validation e test
+        train_images, val_images, test_images = [], [], []
+        train_labels, val_labels, test_labels = [], [], []
+
+        # Distribuisci le immagini tra train, val e test, assicurando almeno un esempio per classe
+        for lbl, imgs in class_dict.items():
+            np.random.shuffle(imgs)  # Mescola le immagini per ogni classe
+
+            # Assegna almeno una immagine a train, val e test
+            train_images.append(imgs[0])
+            train_images.append(imgs[1])
+            train_images.append(imgs[2])
+            train_images.append(imgs[3])
+            val_images.append(imgs[4])
+            test_images.append(imgs[5])
+
+            train_labels.append(lbl)
+            train_labels.append(lbl)
+            train_labels.append(lbl)
+            train_labels.append(lbl)
+            val_labels.append(lbl)
+            test_labels.append(lbl)
+
+            # Distribuisci le immagini rimanenti
+            remaining = imgs[6:]
+            for i, img in enumerate(remaining):
+                if len(train_images) <= len(val_images) and len(train_images) <= len(test_images):
+                    train_images.append(img)
+                    train_labels.append(lbl)
+                elif len(val_images) <= len(test_images):
+                    val_images.append(img)
+                    val_labels.append(lbl)
+                else:
+                    test_images.append(img)
+                    test_labels.append(lbl)
+
+        # Converti le immagini in tensori
+        train_images = torch.stack(train_images)
+        val_images = torch.stack(val_images)
+        test_images = torch.stack(test_images)
+
+        # Converti le etichette in tensori
+        train_labels = torch.tensor(train_labels)
+        val_labels = torch.tensor(val_labels)
+        test_labels = torch.tensor(test_labels)
+
+        # Debugging: stampa le dimensioni dei set
+        print(f"[DEBUG] Numero immagini Train: {len(train_images)}")
+        print(f"[DEBUG] Numero immagini Val: {len(val_images)}")
+        print(f"[DEBUG] Numero immagini Test: {len(test_images)}")
+
+        # Verifica che ogni classe sia presente in tutti i set
+        unique_train = torch.unique(train_labels)
+        unique_val = torch.unique(val_labels)
+        unique_test = torch.unique(test_labels)
+
+        print(f"[DEBUG] Numero di classi in Train: {len(unique_train)}")
+        print(f"[DEBUG] Numero di classi in Val: {len(unique_val)}")
+        print(f"[DEBUG] Numero di classi in Test: {len(unique_test)}")
+
+        # Crea un dataset personalizzato per LFW
+        class LfwDataset(torch.utils.data.Dataset):
+            def __init__(self, images, labels):
+                self.images = images
+                self.labels = labels
+
+            def __len__(self):
+                return len(self.images)
+
+            def __getitem__(self, idx):
+                return self.images[idx], self.labels[idx]
+
+        train = LfwDataset(train_images, train_labels)
+        val = LfwDataset(val_images, val_labels)
+        test = LfwDataset(test_images, test_labels)
+
+        print("[INFO] Dataset LFW caricato con successo!\n")
+
+    elif dataset == 'ageDB':
+        class AgeDBDataset(torch.utils.data.Dataset):
+            def __init__(self, dataset, transform=None):
+                self.dataset = dataset
+                self.transform = transform
+
+            def __len__(self):
+                return len(self.dataset)
+
+            def __getitem__(self, idx):
+                img, lbl = self.dataset[idx]
+                if self.transform:
+                    img = self.transform(img)
+                return img, lbl
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+        os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
+        dataset = retrieve_AgeDB_dataset("data/AgeDB.zip", "data/AgeDB/AgeDB")
+        
+        # Indici dei campioni
+        num_samples = len(dataset)
+        indices = list(range(num_samples))
         np.random.shuffle(indices)
-        train = data
-        val = val_data
-        test = test_data
+
+        # Calcola le dimensioni per validation e test set
+        val_split = int(val_split * num_samples)
+        test_split = int(test_split * num_samples)
+
+        # Dividi i dati in train, val e test
+        train_indices = indices[val_split + test_split:]
+        val_indices = indices[:val_split]
+        test_indices = indices[val_split:val_split + test_split]
+
+        # Crea i dataset separati per train, val e test
+        train = torch.utils.data.Subset(dataset, train_indices)
+        val = torch.utils.data.Subset(dataset, val_indices)
+        test = torch.utils.data.Subset(dataset, test_indices)
+
+        # Applica la trasformazione (se presente)
+        if transform:
+            train = AgeDBDataset(train, transform)
+            val = AgeDBDataset(val, transform)
+            test = AgeDBDataset(test, transform)
 
     # CUB200 -> I don't know if this is the correct way to load the dataset
     elif dataset == 'cub':

@@ -57,7 +57,7 @@ def main(cfg):
 
     # Load model
     print("Model loading")
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
     # load model weights
     weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
@@ -112,8 +112,8 @@ def main(cfg):
         new_model = unlearning_method.unlearn(model, unlearning_train, test_loader, forget_loader)
         forgetting_subset.extend(cfg.unlearn.already_forgotten_classes) 
     
-    plot_features(new_model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
-    plot_features_3d(new_model, test_loader, pca, True)
+    plot_features(cfg, new_model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+    plot_features_3d(cfg, new_model, test_loader, pca, True)
     
     # Save new model
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)

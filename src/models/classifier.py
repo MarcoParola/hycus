@@ -95,24 +95,6 @@ class Classifier(torch.nn.Module):
             raise ValueError("Unsupported model type")
         return features
 
-    """def get_weights(self, nclasses, nlayers):
-        
-        if self.model_name == 'resnet18':
-            x = self.model.conv1(x)
-            x = self.model.bn1(x)
-            x = self.model.relu(x)
-            x = self.model.maxpool(x)
-            x = self.model.layer1(x)
-            x = self.model.layer2(x)
-            x = self.model.layer3(x)
-            x = self.model.layer4(x)
-            features = self.model.avgpool(x)
-            features = features.view(features.size(0), -1)
-            return features
-        else:
-            raise NotImplementedError(f"Extract features non è implementato per il modello {self.model_name}.")"""
-
-
     def get_weights(self, nclasses, nlayers):
         shared = torch.empty(0)
         distinct = torch.empty(0)
@@ -123,8 +105,8 @@ class Classifier(torch.nn.Module):
         if self.model_name == 'resnet18':
             for l in nlayers:
                 if l == 1:
-                    w = self.model.fc[0].weight.data  # Forma [10, 512]
-                    bias = self.model.fc[0].bias.data  # Forma [10]
+                    w = self.model.fc[0].weight.data  
+                    bias = self.model.fc[0].bias.data  
                     bias = bias.unsqueeze(1) 
 
                     if distinct.numel() == 0: 

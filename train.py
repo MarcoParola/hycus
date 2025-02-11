@@ -29,7 +29,7 @@ def main(cfg):
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
 
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)

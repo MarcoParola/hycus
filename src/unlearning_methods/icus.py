@@ -119,11 +119,9 @@ class Icus(BaseUnlearningMethod):
         self.forgetting_subset = forgetting_subset
         self.weights = []
         self.orig_weights = []
-        j=0
         for classe, weights, _, _ in wrapped_train_loader:
             for i in range(len(classe)):
-                self.weights.append(weights)
-                j+=1
+                self.weights.append(weights[i])
         
         self.orig_weights = copy.deepcopy(self.weights)
         self.device = opt.device
@@ -160,7 +158,7 @@ class Icus(BaseUnlearningMethod):
         print("Train epoch start")
         self.joint_ae.train()  # Joint Autoencoder in training mode
         self.model.model.fc.train()  # Model in training mode
-
+        current_batch=0
         running_loss = 0.0
         for batch in unlearning_train:
             torch.cuda.empty_cache()
@@ -170,22 +168,27 @@ class Icus(BaseUnlearningMethod):
             descr = descr.view(descr.size(0), -1)
             # Update the weights of the model
             for i in self.forgetting_subset:
+                if i >= (current_batch+1) * len(targets) or i < current_batch * len(targets):
+                    continue
+                i = i % len(targets)
+                q = i // len(targets)
                 if self.opt.forgetting_set_strategy == "random_values":
-                    if targets == i:
+                    if targets == q * len(targets) + i:
                         weights[i] = torch.randn_like(weights[i], requires_grad=True)
                 elif self.opt.forgetting_set_strategy == "random_class":
                     if 1 not in self.opt.unlearn.nlayers:
                         weights[i] = torch.randn_like(weights[i], requires_grad=True)
                     else:
                         j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
-                        weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = weights[j][:self.model.model.fc[0].weight.data[i].size(0)]
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = self.orig_weights[j][:self.model.model.fc[0].weight.data[i].size(0)]
                         weights[i][self.model.model.fc[0].weight.data[i].size(0):] = torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0):])
                 elif self.opt.forgetting_set_strategy == "zeros":
-                    if targets == i:
+                    if targets == q * self.opt.train.batch_size + i:
                         weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = torch.zeros_like(weights[i][:self.model.model.fc[0].weight.data[i].size(0)], requires_grad=True)
                         weights[i][self.model.model.fc[0].weight.data[i].size(0):] = torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0):])
                 else:
                     raise ValueError("Invalid forgetting set strategy")
+            current_batch+=1
             
             weights.requires_grad_(True)
             descr.requires_grad_(True)
@@ -208,7 +211,7 @@ class Icus(BaseUnlearningMethod):
         print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
         self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
         if self.opt.dataset.name=='cifar100':
-            interval_log=1500
+            interval_log=100
         else:
             interval_log=100
 

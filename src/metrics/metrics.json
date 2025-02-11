@@ -1022,6 +1022,55 @@
           ]
         }
       ]
+    },
+    "lfw": {
+      "original_model": [
+        {
+          "forgetting_set": [12,34,48],
+          "accuracy_retain": 0.7954
+        }
+      ],
+      "unlearning_methods": [
+        {
+          "method_name": "icus",
+          "cases": [
+            {
+              "forgetting_set": [12,34,48],
+              "accuracy_retain": 0.7816,
+              "accuracy_forget": 0.0,
+              "aus":0.9971,
+              "acmd":0.0060,
+              "wacmd":0.0011
+            }
+          ]
+        },
+        {
+          "method_name": "scrub",
+          "cases": [
+            {
+              "forgetting_set": [12,34,48],
+              "accuracy_retain": 0.7468,
+              "accuracy_forget": 0.0,
+              "aus":0.9623,
+              "acmd":0.0097,
+              "wacmd":0.0017
+            }
+          ]
+        },
+        {
+          "method_name": "badT",
+          "cases": [
+            {
+              "forgetting_set": [12,34,48],
+              "accuracy_retain": 0.5734,
+              "accuracy_forget": 0.0339,
+              "aus": 0.763,
+              "acmd":0.0177,
+              "wacmd":0.0026
+            }
+          ]
+        }
+      ]
     }
   }
 }

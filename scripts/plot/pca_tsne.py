@@ -184,19 +184,13 @@ def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_lim
         ax.set_ylim(shared_limits["tsne"][y_comp])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    if unlearned:
-        if cfg.unlearning_method=="icus":
-            plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
-        else:
-            plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
+    if not unlearned:
+        plt.savefig('fig/feature_plot_2d_original_'+cfg.dataset.name+'.png')
     else:
         if cfg.golden_model==False:
-            if cfg.unlearning_method=="icus":
-                plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
-            else:
-                plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
+            plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
         else:
-            plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_'+str(forgetting_subset)+'_golden.png')
+            plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_golden.png')
     plt.show()
 
     if not unlearned:
@@ -204,3 +198,36 @@ def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_lim
     else:
         return None
 
+@hydra.main(config_path='../../config', config_name='config')
+def main(cfg):
+    print("Directory corrente:", os.getcwd())
+    os.chdir('../../..')
+    # Verifica se è stato cambiato correttamente
+    print("Nuova directory:", os.getcwd())
+    data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
+    _, _, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
+    
+    # Data loaders
+    test_loader = torch.utils.data.DataLoader(test, 
+        batch_size=cfg.train.batch_size, 
+        shuffle=False, 
+        num_workers=cfg.train.num_workers)
+    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model.to(cfg.device)
+    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
+    model.load_state_dict(torch.load(weights, map_location=cfg.device))
+    pca, shared_limits = plot_features(cfg, model, test_loader, unlearned=False)
+    #pca = plot_features_3d(cfg, model, test_loader)
+    if cfg.golden_model==True:
+        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name +'_resnet_only_retain_set'+str(cfg.forgetting_set)+ '.pth')
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+        #plot_features_3d(cfg,model, test_loader, pca, True)
+    elif cfg.original_model==False:
+        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set) +'_'+cfg.unlearning_method+ '_resnet.pth')
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+        #plot_features_3d(cfg,model, test_loader, pca, True)
+
+if __name__ == "__main__":
+    main()
