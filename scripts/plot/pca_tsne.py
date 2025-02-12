@@ -161,7 +161,7 @@ def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_lim
         ax.set_title(f'PCA: Component {x_comp + 1} vs Component {y_comp + 1}')
         ax.grid(True)
         ax.legend(loc='best')
-        # Imposta i limiti PCA
+        
         ax.set_xlim(shared_limits["pca"][x_comp])
         ax.set_ylim(shared_limits["pca"][y_comp])
 
@@ -179,7 +179,7 @@ def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_lim
         ax.set_title(f't-SNE: Component {x_comp + 1} vs Component {y_comp + 1}')
         ax.grid(True)
         ax.legend(loc='best')
-        # Imposta i limiti t-SNE
+        
         ax.set_xlim(shared_limits["tsne"][x_comp])
         ax.set_ylim(shared_limits["tsne"][y_comp])
 
@@ -200,10 +200,7 @@ def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_lim
 
 @hydra.main(config_path='../../config', config_name='config')
 def main(cfg):
-    print("Directory corrente:", os.getcwd())
     os.chdir('../../..')
-    # Verifica se è stato cambiato correttamente
-    print("Nuova directory:", os.getcwd())
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     _, _, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
     
@@ -217,17 +214,17 @@ def main(cfg):
     weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     pca, shared_limits = plot_features(cfg, model, test_loader, unlearned=False)
-    #pca = plot_features_3d(cfg, model, test_loader)
+    
     if cfg.golden_model==True:
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name +'_resnet_only_retain_set'+str(cfg.forgetting_set)+ '.pth')
         model.load_state_dict(torch.load(weights, map_location=cfg.device))
         plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
-        #plot_features_3d(cfg,model, test_loader, pca, True)
+        
     elif cfg.original_model==False:
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set) +'_'+cfg.unlearning_method+ '_resnet.pth')
         model.load_state_dict(torch.load(weights, map_location=cfg.device))
         plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
-        #plot_features_3d(cfg,model, test_loader, pca, True)
+        
 
 if __name__ == "__main__":
     main()

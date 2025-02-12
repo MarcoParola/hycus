@@ -52,10 +52,9 @@ class Autoencoder(nn.Module):
             )
 
     def encode(self, x):
-        return self.encoder(x)  # Assumendo che x sia già sulla GPU
-
+        return self.encoder(x)  
     def decode(self, x):
-        return self.decoder(x)  # Assumendo che x sia già sulla GPU
+        return self.decoder(x)  
 
     def forward(self, x):
         z = self.encode(x)
@@ -105,7 +104,7 @@ def aggregate_shared(shared_parts, method):
     elif method == "median":
         return torch.median(stacked, dim=0).values
     else:
-        raise ValueError(f"Metodo di aggregazione '{method}' non supportato.")
+        raise ValueError(f"Aggregation meyhod '{method}' not supported.")
 
 class Icus(BaseUnlearningMethod):
     def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):

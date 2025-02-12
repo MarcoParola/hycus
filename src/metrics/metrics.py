@@ -30,7 +30,7 @@ def compute_predictions(model, loader):
 
 
 def compute_classification_metrics(model, test_loader, num_classes, forgetting_subset):
-    print("Starting metrics computation")
+    
     y_true, y_pred = compute_predictions(model, test_loader)
 
     # compute metrics three times (on whole dataset, on the forgetting subset, on the retaining subset)
@@ -49,8 +49,6 @@ def compute_classification_metrics(model, test_loader, num_classes, forgetting_s
 
 def compute_metrics(model, test_loader, num_classes, forgetting_subset):
     classification_metrics = compute_classification_metrics(model, test_loader, num_classes, forgetting_subset)
-    mia_metrics = None # TODO implement MIA metrics
-    #metrics = {**classification_metrics, **mia_metrics}
     print("classification_metrics")
     metrics = {**classification_metrics}
     return metrics
@@ -58,7 +56,7 @@ def compute_metrics(model, test_loader, num_classes, forgetting_subset):
 
 def get_case(data, dataset, unlearning_method, forgetting_set):
     """
-    Restituisce il caso specifico per un metodo di unlearning e un forgetting_set, nel dataset specificato.
+    Retrieve a specific case for a specific unlearning method and forgetting set, in the json file.
     """
     if dataset not in data["datasets"]:
         return None
@@ -75,12 +73,11 @@ def get_case(data, dataset, unlearning_method, forgetting_set):
                 for case in method["cases"]:
                     if str(case["forgetting_set"]) == forgetting_set:
                         return case
-
     return None
 
 def update_case(data, dataset, unlearning_method, forgetting_set, new_accuracy_retain, new_accuracy_forget):
     """
-    Aggiorna un caso esistente con nuovi valori di accuracy_retain e accuracy_forget nel dataset specificato.
+    Update the accuracy of a specific case for a specific unlearning method and forgetting set, in the json file.
     """
     if dataset not in data["datasets"]:
         return False
@@ -109,7 +106,7 @@ def update_case(data, dataset, unlearning_method, forgetting_set, new_accuracy_r
 
 def add_case(data, dataset, unlearning_method, forgetting_set, accuracy_retain, accuracy_forget):
     """
-    Aggiunge un nuovo caso al metodo di unlearning specificato nel dataset specificato.
+    Add a new case for a specific unlearning method and forgetting set, in the json file.
     """
     if dataset not in data["datasets"]:
         return False
@@ -117,11 +114,11 @@ def add_case(data, dataset, unlearning_method, forgetting_set, accuracy_retain, 
     dataset_data = data["datasets"][dataset]
 
     if unlearning_method == "original_model":
-        # Controlla se il caso esiste già
+        # check if the case already exists
         for caso in dataset_data["original_model"]:
             if caso["forgetting_set"] == forgetting_set:
                 return False  # Caso già esistente
-        # Aggiungi il nuovo caso
+        # update the original model case
         dataset_data["original_model"].append({
             "forgetting_set": forgetting_set,
             "accuracy_retain": accuracy_retain
@@ -132,11 +129,11 @@ def add_case(data, dataset, unlearning_method, forgetting_set, accuracy_retain, 
     else:
         for method in dataset_data["unlearning_methods"]:
             if method["method_name"] == unlearning_method:
-                # Controlla se il caso esiste già
+                # check if the case already exists
                 for case in method["cases"]:
                     if str(case["forgetting_set"]) == forgetting_set:
-                        return False  # Caso già esistente
-                # Aggiungi il nuovo caso
+                        return False  # case already exists
+                # add the new case
                 method["cases"].append({
                     "forgetting_set": forgetting_set,
                     "accuracy_retain": accuracy_retain,
@@ -181,14 +178,14 @@ def calculate_shannon_divergence(features_path_1, features_path_2):
 
 def calculate_aus(data, dataset, unlearning_method, forgetting_set):
     if dataset not in data["datasets"]:
-        raise ValueError(f"Dataset '{dataset}' non trovato.")
+        raise ValueError(f"Dataset '{dataset}' not found.")
     dataset_data = data["datasets"][dataset]
     original = get_case(dataset_data, "original_model", forgetting_set)
     unl = get_case(dataset_data, unlearning_method, forgetting_set)
     if not original:
-        raise ValueError(f"Original model case non trovato per il forgetting_set {forgetting_set}.")
+        raise ValueError(f"Original model case not found for forgetting_set {forgetting_set}.")
     if not unl:
-        raise ValueError(f"Case non trovato per il metodo '{unlearning_method}' e il forgetting_set {forgetting_set}.")
+        raise ValueError(f"Case not found for the method '{unlearning_method}' and forgetting_set {forgetting_set}.")
     return (1 - (original["accuracy_retain"] - unl["accuracy_retain"])) / (1 + abs(unl["accuracy_forget"]))
 
 
@@ -200,7 +197,8 @@ def main(cfg):
         aus=calculate_aus(method, str(cfg.forgetting_set))
         print("Method: "+method+" AUS: "+str(aus))
     
-    #CODICI USATI PER TESTARE CHE ANDASSE
+    #TEST OF JSON UPDATE
+
     print("Modifica test")
     with open("src/metrics/metrics.json", "r") as file:
         data = json.load(file)

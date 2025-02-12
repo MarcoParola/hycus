@@ -34,8 +34,6 @@ def get_early_stopping(patience=10):
 def get_forgetting_subset(forgetting_set, n_classes, forgetting_set_size):
     
     if forgetting_set == 'random':
-        print('Random forgetting set')
-        # return random values using torch
         fs= torch.randperm(n_classes)[:forgetting_set_size].tolist()
         print(fs)
         return fs
@@ -48,22 +46,21 @@ def get_forgetting_subset(forgetting_set, n_classes, forgetting_set_size):
     
         
 def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_set_size, class_forget=None):
-    # Ottieni gli indici di tutte le etichette nel dataset completo
     all_indices = np.arange(len(full_dataset))
     all_labels = np.array([full_dataset[i][1] for i in all_indices])
     
-    # Trova gli indici dei campioni da dimenticare
+    # find indexes of the classes to forget
     forget_indices = []
     for class_idx in forgetting_subset:
         class_indices = np.where(all_labels == class_idx)[0]
-        forget_indices.extend(class_indices)  # Aggiunge gli indici alla lista
+        forget_indices.extend(class_indices)  # add all the indices of the class to forget
 
-    # Se vuoi evitare duplicati (nel caso ci siano sovrapposizioni), puoi convertire in un set:
+    # avoid duplicates
     forget_indices = list(set(forget_indices))
 
-    # Trova gli indici dei campioni da mantenere
+    # find indexes of the classes to retain
     retain_indices = list(set(all_indices) - set(forget_indices))
-    # Crea i subset di PyTorch
+    # create the datasets
     forget_dataset = Subset(full_dataset, forget_indices)
     retain_dataset = Subset(full_dataset, retain_indices)
     

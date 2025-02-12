@@ -185,24 +185,23 @@ def main(cfg):
             x = x.to(cfg.device)
             y = y.to(cfg.device)
 
-            # Predizioni
+            # Predictions
             y_pred = model(x)
 
-            # Predizioni e classi predette
+            # Predictions and predicted classes
             _, predicted = y_pred.max(1)
 
-            # Itera su ciascun campione
             for label, pred in zip(y, predicted):
                 if label.item() in cfg.forgetting_set:
-                    # Classi dimenticate
+                    # Forget classes
                     total_for += 1
                     correct_for += (label == pred).item()
                 else:
-                    # Classi conservate
+                    # Retain classes
                     total_ret += 1
                     correct_ret += (label == pred).item()
 
-        # Calcolo medie
+        # Compute averages
         retain_acc = 100 * correct_ret / total_ret if total_ret > 0 else 0
         forget_acc = 100 * correct_for / total_for if total_for > 0 else 0
         wandb_logger.log_metrics({"retain_test_acc": retain_acc, "forget_test_acc": forget_acc})
