@@ -35,7 +35,7 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
             best_score = val_score
             best_k = k
 
-    print(f"Miglior valore di K: {best_k} con accuratezza {best_score:.2f}")
+    print(f"Bast K value: {best_k} accuracy {best_score:.2f}")
 
     # Allena il modello con il miglior valore di k
     knn = KNeighborsClassifier(n_neighbors=best_k)
@@ -44,12 +44,12 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
     # Predizioni sul set di test
     y_pred = knn.predict(X_test)
     test_accuracy = accuracy_score(y_test, y_pred)
-    print(f"Accuratezza sul test: {test_accuracy:.2f}")
+    print(f"Test accuracy: {test_accuracy:.2f}")
 
     # Calcolo delle metriche di classificazione
     precision, recall, f1, support = precision_recall_fscore_support(y_test, y_pred, average=None)
 
-    print("\nReport di classificazione:")
+    print("\nClassification report:")
     print(classification_report(y_test, y_pred))
 
     # Log su wandb
@@ -73,7 +73,7 @@ def knn(X_train, y_train, X_val, y_val, X_test, y_test, cfg):
         )
     })
 
-@hydra.main(config_path='../config', config_name='config', version_base=None)
+@hydra.main(config_path='../../config', config_name='config', version_base=None)
 def main(cfg):
     # Converte la configurazione in un dizionario
     config_dict = OmegaConf.to_container(cfg, resolve=True)
@@ -92,13 +92,13 @@ def main(cfg):
         test_features = torch.load('data/features/cifar10/test_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
         test_labels = torch.load('data/features/cifar10/test_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
     else:
-        if cfg.orignal_model==True:
-        train_features = torch.load('data/features/cifar10/train_features_original.pt')
-        train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
-        validation_features = torch.load('data/features/cifar10/val_features_original.pt')
-        validation_labels = torch.load('data/features/cifar10/val_labels_original.pt')
-        test_features = torch.load('data/features/cifar10/test_features_original.pt')
-        test_labels = torch.load('data/features/cifar10/test_labels_original.pt')
+        if cfg.original_model==True:
+            train_features = torch.load('data/features/cifar10/train_features_original.pt')
+            train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
+            validation_features = torch.load('data/features/cifar10/val_features_original.pt')
+            validation_labels = torch.load('data/features/cifar10/val_labels_original.pt')
+            test_features = torch.load('data/features/cifar10/test_features_original.pt')
+            test_labels = torch.load('data/features/cifar10/test_labels_original.pt')
         else:
             train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
             train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')

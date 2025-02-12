@@ -3,11 +3,13 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import numpy as np
+import os
 import random
 import copy
+import json
 from torch.utils.data import DataLoader
 from src.unlearning_methods.base import BaseUnlearningMethod
-from src.utils import retrieve_weights
+from src.utils import retrieve_weights, get_numbers_from_superclass
 from src.metrics.metrics import compute_metrics
 
 class Autoencoder(nn.Module):
@@ -92,11 +94,22 @@ class JointAutoencoder(nn.Module):
         
         return descr_from_descr, descr_from_weight, weight_from_weight, weight_from_descr, latent_descr, latent_weight
 
+def aggregate_shared(shared_parts, method):
+    stacked = torch.stack(shared_parts) 
+    if method == "mean":
+        return torch.mean(stacked, dim=0)
+    elif method == "min":
+        return torch.min(stacked, dim=0).values
+    elif method == "max":
+        return torch.max(stacked, dim=0).values
+    elif method == "median":
+        return torch.median(stacked, dim=0).values
+    else:
+        raise ValueError(f"Metodo di aggregazione '{method}' non supportato.")
 
 class Icus(BaseUnlearningMethod):
-    def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger=None):
+    def __init__(self, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):
         super().__init__(opt, model)
-        #self.fc = model.fc
         self.opt=opt
         self.orig_model = copy.deepcopy(self.model)
         self.wrapped_train_loader = wrapped_train_loader
@@ -104,16 +117,12 @@ class Icus(BaseUnlearningMethod):
         self.description = wrapped_train_loader.dataset.descr
         flatten_description = self.description.view(nclass, -1)
         self.forgetting_subset = forgetting_subset
-        print("Forgetting subset: ", self.forgetting_subset)
         self.weights = []
         self.orig_weights = []
-        #self.weights = [None] * self.opt.dataset.classes
-        j=0
         for classe, weights, _, _ in wrapped_train_loader:
             for i in range(len(classe)):
-                #self.weights[j] = weights
-                self.weights.append(weights)
-                j+=1
+                self.weights.append(weights[i])
+        
         self.orig_weights = copy.deepcopy(self.weights)
         self.device = opt.device
         #autoencoder
@@ -138,7 +147,6 @@ class Icus(BaseUnlearningMethod):
 
     
     def unlearn(self, model, unlearning_train, val_loader):
-        #self.model.fc[0].weight.requires_grad_(True) #INUTILE???
         self.current_step = 0
         for epoch in range(self.opt.unlearn.max_epochs):
             print("Epoch: ", epoch)
@@ -150,12 +158,137 @@ class Icus(BaseUnlearningMethod):
         print("Train epoch start")
         self.joint_ae.train()  # Joint Autoencoder in training mode
         self.model.model.fc.train()  # Model in training mode
+        current_batch=0
+        running_loss = 0.0
+        for batch in unlearning_train:
+            torch.cuda.empty_cache()
+            targets, weights, descr, _ = batch
+            weights, descr, targets = weights.to(self.device), descr.to(self.device), targets.to(self.device)
+            
+            descr = descr.view(descr.size(0), -1)
+            # Update the weights of the model
+            for i in self.forgetting_subset:
+                if i >= (current_batch+1) * len(targets) or i < current_batch * len(targets):
+                    continue
+                i = i % len(targets)
+                q = i // len(targets)
+                if self.opt.forgetting_set_strategy == "random_values":
+                    if targets == q * len(targets) + i:
+                        weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                elif self.opt.forgetting_set_strategy == "random_class":
+                    if 1 not in self.opt.unlearn.nlayers:
+                        weights[i] = torch.randn_like(weights[i], requires_grad=True)
+                    else:
+                        j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = self.orig_weights[j][:self.model.model.fc[0].weight.data[i].size(0)]
+                        weights[i][self.model.model.fc[0].weight.data[i].size(0):] = torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0):])
+                elif self.opt.forgetting_set_strategy == "zeros":
+                    if targets == q * self.opt.train.batch_size + i:
+                        weights[i][:self.model.model.fc[0].weight.data[i].size(0)] = torch.zeros_like(weights[i][:self.model.model.fc[0].weight.data[i].size(0)], requires_grad=True)
+                        weights[i][self.model.model.fc[0].weight.data[i].size(0):] = torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0):])
+                else:
+                    raise ValueError("Invalid forgetting set strategy")
+            current_batch+=1
+            
+            weights.requires_grad_(True)
+            descr.requires_grad_(True)
+            
+            # Forward pass
+            att_from_att, att_from_weight, weight_from_weight, weight_from_att, latent_att, latent_weight = self.joint_ae((descr, weights, self.opt.device))
+
+            loss = self.compute_loss(descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight)
+            self.logger.log_metrics({"loss": loss.item()}, step=self.current_step)
+
+            # Backward pass
+            self.descr_optimizer.zero_grad()
+            self.weights_optimizer.zero_grad()
+            loss.backward()
+            self.descr_optimizer.step()  # Update autoencoder
+            self.weights_optimizer.step() 
+
+            running_loss += loss.item()
+
+        print(f"Mean loss in this epoch: {running_loss / len(unlearning_train)}")
+        self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
+        if self.opt.dataset.name=='cifar100':
+            interval_log=100
+        else:
+            interval_log=100
+
+        if epoch % interval_log == 0 or epoch == self.opt.unlearn.max_epochs-1:
+            self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
+        
+
+    def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
+        loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + \
+               nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) + \
+               self.opt.unlearn.cos_sim_factor * (1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))) 
+               #+self.opt.unlearn.latent_reg_factor * nn.MSELoss()(latent_att, latent_weight)
+        self.logger.log_metrics({"att_from_att_loss": nn.MSELoss()(descr, att_from_att).item()},step=self.current_step)
+        self.logger.log_metrics({"weights_from_weights_loss": nn.MSELoss()(weights, weight_from_weight).item()},step=self.current_step)
+        self.logger.log_metrics({"weights_from_att_loss": nn.MSELoss()(weights, weight_from_att).item()},step=self.current_step)
+        self.logger.log_metrics({"att_from_weights_loss": nn.MSELoss()(descr, att_from_weight).item()},step=self.current_step)
+        self.logger.log_metrics({"cosine_similarity loss": 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)).item()},step=self.current_step)
+        return loss 
+
+
+    def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
+        self.model.eval()
+        self.joint_ae.eval()
+        distinct = []
+        shared_parts = [] 
+        
+        for i in range(self.opt.dataset.classes):
+            _, w, d, _ = wrapped_loader.dataset[i]
+            d = d.view(-1)
+            latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
+            latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
+            
+            if self.opt.unlearn.reconstruct_from_d:
+                w = self.joint_ae.ae_w.decode(latent_d)
+            else:
+                w = self.joint_ae.ae_w.decode(latent_w)
+            
+            if 1 in self.opt.unlearn.nlayers: 
+                distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
+                shared_parts.append(w[self.model.model.fc[0].weight.size(1) + 1:])
+            else:
+                shared_parts.append(w)
+        
+        aggregation_method = self.opt.unlearn.aggregation_method
+        fs = self.opt.forgetting_set 
+        os.makedirs(f"shared_weights/forgetting_set_{fs}/{aggregation_method}", exist_ok=True)
+        torch.save(shared_parts, f"shared_weights/forgetting_set_{fs}/{aggregation_method}/shared_weights_epoch_{epoch}.pt")
+        shared = aggregate_shared(shared_parts, aggregation_method).to(self.opt.device)
+        
+        if distinct:
+            distinct = torch.stack(distinct).to(self.opt.device)
+        
+        nlayers = self.opt.unlearn.nlayers
+        self.model.set_weights(distinct, shared, self.opt.dataset.classes, nlayers)
+        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
+        
+        # Log delle metriche
+        self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
+
+
+class IcusHierarchy(Icus):
+    def __init__(self, semantic_dict, opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger):
+        super().__init__(opt, model, input_dim, nclass, wrapped_train_loader, forgetting_subset, logger)
+        self.semantic_dict = semantic_dict
+        self.logger = logger
+    
+
+    def train_one_epoch(self, unlearning_train, val_loader, epoch):
+        print("Train epoch start")
+        self.joint_ae.train()  # Joint Autoencoder in training mode
+        self.model.model.fc.train()  # Model in training mode
 
         running_loss = 0.0
         for batch in unlearning_train:
             targets, weights, descr, _ = batch
             weights, descr, targets = weights.to(self.device), descr.to(self.device), targets.to(self.device)
-            
+
             descr = descr.view(descr.size(0), -1)
             # Update the weights of the model
             for i in self.forgetting_subset:
@@ -166,7 +299,11 @@ class Icus(BaseUnlearningMethod):
                     if 1 not in self.opt.unlearn.nlayers:
                         weights[i] = torch.randn_like(weights[i], requires_grad=True)
                     else:
-                        j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
+                        list_of_superclass = get_numbers_from_superclass(i, self.semantic_dict)
+                        if list_of_superclass == []:
+                            j = random.choice([x for x in range(self.opt.dataset.classes) if x not in self.forgetting_subset])
+                        else:
+                            j = random.choice(list_of_superclass)
                         weights[i][:self.model.model.fc[0].weight.data[i].size(0) + 1] = weights[j][:self.model.model.fc[0].weight.data[i].size(0) + 1]
                         torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
                 elif self.opt.forgetting_set_strategy == "zeros":
@@ -175,7 +312,7 @@ class Icus(BaseUnlearningMethod):
                         torch.cat((weights[i], torch.randn_like(weights[i][self.model.model.fc[0].weight.data[i].size(0) + 1:])), dim=0)
                 else:
                     raise ValueError("Invalid forgetting set strategy")
-            
+
             weights.requires_grad_(True)
             descr.requires_grad_(True)
             
@@ -199,52 +336,3 @@ class Icus(BaseUnlearningMethod):
         self.logger.log_metrics({"average_loss": running_loss / len(unlearning_train)}, step=epoch)
         if epoch%100 == 0:
             self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
-        
-
-    def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
-        loss = nn.MSELoss()(descr, att_from_att) + nn.MSELoss()(weights, weight_from_weight) + \
-               nn.MSELoss()(weights, weight_from_att) + nn.MSELoss()(descr, att_from_weight) + \
-               self.opt.unlearn.cos_sim_factor * (1 - torch.mean(F.cosine_similarity(latent_att, latent_weight))) 
-               #+self.opt.unlearn.latent_reg_factor * nn.MSELoss()(latent_att, latent_weight)
-        self.logger.log_metrics({"att_from_att_loss": nn.MSELoss()(descr, att_from_att).item()},step=self.current_step)
-        self.logger.log_metrics({"weights_from_weights_loss": nn.MSELoss()(weights, weight_from_weight).item()},step=self.current_step)
-        self.logger.log_metrics({"weights_from_att_loss": nn.MSELoss()(weights, weight_from_att).item()},step=self.current_step)
-        self.logger.log_metrics({"att_from_weights_loss": nn.MSELoss()(descr, att_from_weight).item()},step=self.current_step)
-        self.logger.log_metrics({"cosine_similarity loss": 1 - torch.mean(F.cosine_similarity(latent_att, latent_weight)).item()},step=self.current_step)
-        return loss 
-
-
-    def test_unlearning_effect(self, wrapped_loader, loader, forgetting_subset, epoch):
-        self.model.eval()  # Set model in evaluation mode
-        self.joint_ae.eval()  # Set autoencoder in evaluation mode
-        distinct = []
-        shared = None 
-        for i in range(self.opt.dataset.classes):
-            _, w, d, _ = wrapped_loader.dataset[i]
-            d = d.view(-1)
-            latent_w = self.joint_ae.ae_w.encode(w.to(self.opt.device))
-            latent_d = self.joint_ae.ae_d.encode(d.to(self.opt.device))
-            if self.opt.unlearn.reconstruct_from_d == True:
-                w = self.joint_ae.ae_w.decode(latent_d)
-            else:
-                w = self.joint_ae.ae_w.decode(latent_w)
-            if 1 in self.opt.unlearn.nlayers: 
-                distinct.append(w[:self.model.model.fc[0].weight.size(1) + 1])
-                shared_part = w[self.model.model.fc[0].weight.size(1) + 1:]
-            else:
-                shared_part = w
-            if shared is None:
-                shared = shared_part.clone()
-            else:
-                shared += shared_part
-        shared = shared / self.opt.dataset.classes 
-        if distinct != []:
-            distinct = torch.stack(distinct).to(self.opt.device)
-        shared = shared.to(self.opt.device)
-        nlayers = self.opt.unlearn.nlayers
-        self.model.set_weights(distinct, shared, self.opt.dataset.classes, nlayers)
-        metrics = compute_metrics(self.model, loader, self.opt.dataset.classes, forgetting_subset)
-        # Log delle metriche
-        self.logger.log_metrics({'accuracy_retain': metrics['accuracy_retaining'], 'accuracy_forget': metrics['accuracy_forgetting']})
-        print("Accuracy forget ", metrics['accuracy_forgetting'])
-        print("Accuracy retain ", metrics['accuracy_retaining'])

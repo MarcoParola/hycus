@@ -7,20 +7,6 @@ from src.models.classifier import Classifier
 
 # goodbye and thank you for all the fish: https://huggingface.co/anonauthors 
 def load_model(weights_name, checkpoint=None, device='cpu'):
-    """Load model from checkpoint
-    model_name: str: model name
-    dataset: str: dataset name
-    checkpoint: str: path to checkpoint
-    device: str: device to load model
-    """
-
-    '''
-    model = None
-    if model_name == 'resnet':
-        model=ResNetCustom(ResidualBlock)
-    else:
-        raise ValueError(f'Unknown model: {model_name}')
-    '''
     model = Classifier(weights_name, 10, finetune=True)
     model.load_state_dict(torch.load(checkpoint, map_location=device))
     model.to(device)

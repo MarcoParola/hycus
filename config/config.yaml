@@ -10,14 +10,14 @@ model: resnet
 weights_name: ResNet18_Weights.IMAGENET1K_V1
 unlearning_method: icus
 forgetting_set_strategy: random_class
-forgetting_set: [4,11,19,26,40,55,62,68,89,93]
+forgetting_set: [4,22,49,51,63,68,72,79,88,93]
 forgetting_set_size: 10
 original_model: False
 
 dataset: 
-  name: cifar100
+  name: cifar10
   path: ./data
-  classes: 100
+  classes: 10
   resize: 224
 
 device: "cuda"
@@ -42,6 +42,7 @@ unlearn:
   update_json: False
   reconstruct_from_d: False
   already_forgotten_classes: []
+  aggregation_method: mean
 
 train_iters: 999
 

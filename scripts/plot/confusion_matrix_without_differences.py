@@ -17,24 +17,21 @@ from matplotlib.colors import TwoSlopeNorm, Normalize
 
 def plot_all_the_confusion_matrices(cms, cfg, names, labels=None, rows=1, cols=6, positions=None):
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
-    axes = axes.flatten()  # Converti la griglia di assi in un array 1D
+    axes = axes.flatten()  
 
-    # Se le posizioni non sono specificate, usa un ordine sequenziale
     if positions is None:
         positions = list(range(len(cms)))
 
-    # Trova i valori massimo e minimo tra tutte le confusion matrix per mantenere la scala coerente
+    # Find max and min values for normalization
     overall_min = min(cm.min() for cm in cms)
     overall_max = max(cm.max() for cm in cms)
 
-    # Crea una normalizzazione lineare basata su overall_min e overall_max
+    # normalization
     norm = mcolors.Normalize(vmin=overall_min, vmax=overall_max)
 
-    # Aggiungi confusion matrix nelle posizioni specificate
     for i, pos in enumerate(positions):
         if i < len(cms) and pos < len(axes):
             ax = axes[pos]
-            # Usa la mappa di colori "Blues"
             im = ax.imshow(cms[i], interpolation='nearest', cmap=plt.cm.Blues, norm=norm)
             ax.set_title(f"Matrix {names[i]}")
             if labels is not None:
@@ -47,12 +44,10 @@ def plot_all_the_confusion_matrices(cms, cfg, names, labels=None, rows=1, cols=6
                     for k in range(cms[i].shape[1]):
                         ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")
 
-    # Nascondi gli assi non utilizzati
     for j in range(len(cms), len(axes)):
         axes[j].axis('off')
 
     # Salva la figura
-    #plt.savefig("src/data/all_the_confusion_matrices_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
     plt.savefig("src/data/all_the_confusion_matrices_" + str(cfg.forgetting_set) + ".pdf")
     
 
@@ -115,13 +110,13 @@ def main(cfg):
     cm6 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
     cms.append(cm6)
 
-    """#finetuning
+    #finetuning
     weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_finetuning_{cfg.model}.pth")
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     cm7 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm7)"""
+    cms.append(cm7)
 
-    names=["original", "golden", "scrub", "ssd", "badT", "icus"]
+    names=["original", "golden", "scrub", "ssd", "badT", "icus", "finetuning"]
 
     plot_all_the_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=1, cols=6)
 

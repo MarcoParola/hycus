@@ -36,7 +36,7 @@ def svm_classifier(X_train, y_train, X_val, y_val, X_test, y_test):
             best_score = val_score
             best_c = c
 
-    print(f"Miglior valore di C: {best_c} con accuratezza {best_score:.2f} sulla validazione")
+    print(f"Best C value: {best_c} accuracy {best_score:.2f} on validation set")
 
     # Allena il modello con il miglior valore di C
     svm = LinearSVC(C=best_c)
@@ -45,8 +45,8 @@ def svm_classifier(X_train, y_train, X_val, y_val, X_test, y_test):
     # Predizioni sul set di test
     y_pred = svm.predict(X_test)
     test_accuracy = accuracy_score(y_test, y_pred)
-    print(f"Accuratezza sul test: {test_accuracy:.2f}")
-    print("\nReport di classificazione:")
+    print(f"Test accuracy: {test_accuracy:.2f}")
+    print("\nClassification report:")
     print(classification_report(y_test, y_pred))
 
     # Calcolo delle metriche di classificazione
@@ -80,7 +80,7 @@ def svm_classifier(X_train, y_train, X_val, y_val, X_test, y_test):
     })
 
 
-@hydra.main(config_path='../config', config_name='config', version_base=None)
+@hydra.main(config_path='../../config', config_name='config', version_base=None)
 def main(cfg):
     # Configurazione di WandB
     config_dict = OmegaConf.to_container(cfg, resolve=True)
@@ -88,6 +88,7 @@ def main(cfg):
     wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project+'_svm', config=flat_config)
 
     # Caricamento dei dati
+<<<<<<< HEAD
     if cfg.unlearning_method == 'retrain': #Caso del golden model
         train_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
         train_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
@@ -95,21 +96,30 @@ def main(cfg):
         validation_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
         test_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
         test_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
+=======
+    if cfg.golden_model==True: #Caso del golden model
+        train_features = torch.load('data/features/'+str(cfg.dataset.name)+'/train_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        train_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/train_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        validation_features = torch.load('data/features/'+str(cfg.dataset.name)+'/val_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        validation_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/val_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        test_features = torch.load('data/features/'+str(cfg.dataset.name)+'/test_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+        test_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/test_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+>>>>>>> 0709529d6df5ffeab555d533a96135ba91ff7a64
     else:
         if cfg.original_model==True: #Caso del modello originale
-            train_features = torch.load('data/features/cifar10/train_features_original.pt')
-            train_labels = torch.load('data/features/cifar10/train_labels_original.pt')
-            validation_features = torch.load('data/features/cifar10/val_features_original.pt')
-            validation_labels = torch.load('data/features/cifar10/val_labels_original.pt')
-            test_features = torch.load('data/features/cifar10/test_features_original.pt')
-            test_labels = torch.load('data/features/cifar10/test_labels_original.pt')
+            train_features = torch.load('data/features/'+str(cfg.dataset.name)+'/train_features_original.pt')
+            train_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/train_labels_original.pt')
+            validation_features = torch.load('data/features/'+str(cfg.dataset.name)+'/val_features_original.pt')
+            validation_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/val_labels_original.pt')
+            test_features = torch.load('data/features/'+str(cfg.dataset.name)+'/test_features_original.pt')
+            test_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/test_labels_original.pt')
         else: #Caso del modello unlearning
-            train_features = torch.load('data/features/cifar10/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-            train_labels = torch.load('data/features/cifar10/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-            validation_features = torch.load('data/features/cifar10/val_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-            validation_labels = torch.load('data/features/cifar10/val_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-            test_features = torch.load('data/features/cifar10/test_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
-            test_labels = torch.load('data/features/cifar10/test_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            train_features = torch.load('data/features/'+str(cfg.dataset.name)+'/train_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            train_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/train_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            validation_features = torch.load('data/features/'+str(cfg.dataset.name)+'/val_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            validation_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/val_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            test_features = torch.load('data/features/'+str(cfg.dataset.name)+'/test_features_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
+            test_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/test_labels_'+cfg.unlearning_method+'_'+str(cfg.forgetting_set)+'.pt')
 
     # Esecuzione del classificatore SVM
     svm_classifier(train_features, train_labels, validation_features, validation_labels, test_features, test_labels)

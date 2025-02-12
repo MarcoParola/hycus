@@ -69,7 +69,13 @@ def get_retain_and_forget_datasets(full_dataset, forgetting_subset, forgetting_s
     
     return retain_dataset, forget_dataset, forget_indices
         
-    
+
+def get_numbers_from_superclass(target_number, data):
+    for super_class, items in data.items():
+        for item in items:
+            if item[1] == target_number:  
+                return [i[1] for i in items if i[1] != target_number]
+    return None
 
 
 ################## STUFF FOR SSD TAKEN FROM CORRECTIVE MACHINE UNLEARNING PAPER ####################
