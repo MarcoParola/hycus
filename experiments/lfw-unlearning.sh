@@ -1,0 +1,3 @@
+python unlearn.py --dataset.name=lfw --dataset.classes=62 --model=resnet18 --unlearning_method=icus --unlearn.max_epochs=5000 --unlearn.lr=5e-5 --forgetting_set_size=3 --forgetting_set=[12,34,48]
+python unlearn.py --dataset.name=lfw --dataset.classes=62 --model=resnet18 --unlearning_method=scrub --unlearn.scrub_steps=10 --unlearn.lr=5e-4 --forgetting_set_size=3 --forgetting_set=[12,34,48]
+python unlearn.py --dataset.name=lfw --dataset.classes=62 --model=resnet18 --unlearning_method=badT --unlearn.max_epochs=900 --unlearn.lr=5e-4 --forgetting_set_size=3 --forgetting_set=[12,34,48]

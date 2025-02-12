@@ -149,7 +149,7 @@ class Classifier(torch.nn.Module):
                         self.model.fc[0].weight.data[i] = distinct[i][:-1]
                         self.model.fc[0].bias.data[i] = distinct[i][-1]
                 elif l == 2:
-                    # Assegna i pesi e bias a layer4[1].bn2
+                    # Assign weights and bias to layer4[1].bn2
                     bn_w_shape = self.model.layer4[1].bn2.weight.data.shape
                     bn_b_shape = self.model.layer4[1].bn2.bias.data.shape
 
@@ -162,7 +162,7 @@ class Classifier(torch.nn.Module):
                     idx_shared += bn_w_shape[0] + bn_b_shape[0]
 
                 elif l == 3:
-                    # Assegna i pesi a layer4[1].conv2
+                    # Assign weights to layer4[1].conv2
                     conv_w_shape = self.model.layer4[1].conv2.weight.data.shape
                     conv_weight = shared[idx_shared:idx_shared + conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]].view(conv_w_shape)
 
@@ -171,7 +171,7 @@ class Classifier(torch.nn.Module):
                     idx_shared += conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]
 
                 elif l == 4:
-                    # Assegna i pesi e bias a layer2[1].bn1
+                    # Assign weights and bias to layer2[1].bn1
                     bn_w_shape = self.model.layer2[1].bn1.weight.data.shape
                     bn_b_shape = self.model.layer2[1].bn1.bias.data.shape
 
@@ -184,7 +184,7 @@ class Classifier(torch.nn.Module):
                     idx_shared += bn_w_shape[0] + bn_b_shape[0]
 
                 elif l == 5:
-                    # Assegna i pesi a layer1[1].conv1
+                    # Assign weights to layer1[1].conv1
                     conv_w_shape = self.model.layer1[1].conv1.weight.data.shape
                     conv_weight = shared[idx_shared:idx_shared + conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]].view(conv_w_shape)
 
@@ -193,7 +193,7 @@ class Classifier(torch.nn.Module):
                     idx_shared += conv_w_shape[0] * conv_w_shape[1] * conv_w_shape[2] * conv_w_shape[3]
 
         elif self.model_name == 'efficientnet_b0':
-            # Se hai bisogno di implementare anche per EfficientNet B0, puoi farlo qui
+            # Code here fot efficientnet_b0
             pass
 
         return
@@ -203,12 +203,6 @@ class Classifier(torch.nn.Module):
 if __name__ == '__main__':
 
     model_list = [
-        # 'ResNet50_Weights.IMAGENET1K_V1',
-        # 'EfficientNet_B1_Weights.IMAGENET1K_V1',
-        # 'VGG16_Weights.IMAGENET1K_V1',
-        # 'DenseNet121_Weights.IMAGENET1K_V1',
-        # 'ResNet152_Weights.IMAGENET1K_V2',
-        # 'EfficientNet_B1_Weights.IMAGENET1K_V1',
         'ResNet18_Weights.IMAGENET1K_V1',
         'EfficientNet_B0_Weights.IMAGENET1K_V1'
     ]

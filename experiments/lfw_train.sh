@@ -1,0 +1,1 @@
+python train.py --dataset.name=lfw --dataset.classes=62 --model=resnet18 --train.epochs=1200 --train.lr=1e-6 --train.batch_size=8

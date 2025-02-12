@@ -17,10 +17,7 @@ class BaseUnlearningMethod(ABC):
     def __init__(self, opt, model, forgetting_set=None, prenet=None):
         self.opt = opt
         self.model = model.to(opt.device)
-        #self.best_top1 = -1
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.0025)
-        #self.scheduler = LinearLR(self.optimizer, T=self.opt.train_iters*1.25, warmup_epochs=self.opt.train_iters//100) # Spend 1% time in warmup, and stop 66% of the way through training 
-        #self.top1 = -1
         if forgetting_set is not None:
             self.forgetting_subset = forgetting_set
         self.scaler = GradScaler()  # mixed precision
@@ -46,8 +43,7 @@ class BaseUnlearningMethod(ABC):
     def _training_step(self, inputs, labels):
         """Single step of training."""
         inputs, labels = inputs.to(self.opt.device), labels.to(self.opt.device)
-        print(f"Inputs are on device: {inputs.device}, Labels are on device: {labels.device}")
-        
+    
         with torch.cuda.amp.autocast():
             outputs = self.model(inputs)
             loss = torch.nn.functional.cross_entropy(outputs, labels)
@@ -73,7 +69,6 @@ class BaseUnlearningMethod(ABC):
         self.model.to(self.opt.device)
 
     def train_one_epoch(self, loader):
-        print("New training epoch")
         self.model.train()  
         # For each batch in the loader
         for inputs, labels in tqdm.tqdm(loader):
@@ -130,13 +125,13 @@ class BaseUnlearningMethod(ABC):
         self.top1 = -1
 
         if not save_preds:
-            print(f'Epoca: {self.epoch} Val Top1: {top1*100:.2f}%')
+            print(f'Epoch: {self.epoch} Val Top1: {top1*100:.2f}%')
 
         if save_model:
             if top1 > self.best_top1:  # If the best found until now
                 self.best_top1 = top1  
                 self.best_model = copy.deepcopy(self.model).cpu()  
-                print(f"Nuovo best model salvato con accuratezza: {top1*100:.2f}%")
+                print(f"New best model with accuracy: {top1*100:.2f}%")
 
         self.model.train()  
 

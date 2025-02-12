@@ -29,5 +29,13 @@ wandb login
 ```
 
 ## **Usage**
+To create golden model: 
+```sh
+python train_without_forgetting.py golden_model=True dataset.name=dataset_name dataset.classes= numer_of_classes forgetting_set_size= size_fs forgetting_set=[...]
+``` 
+To execute finetuning
+```sh
+python train_without_forgetting.py unlearning_method=finetuning dataset.name=dataset_name dataset.classes=numer_of_classes forgetting_set_size=size_fs forgetting_set=[...]
+``` 
 
 TODO

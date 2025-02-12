@@ -19,23 +19,22 @@ from scripts.plot.confusion_matrix import compute_confusion_matrix, difference_b
 
 @hydra.main(config_path='../config', config_name='config', version_base=None)
 def main(cfg):
-    # Percorso dei dati
+    # Data path
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Resize((224, 224)),  # Ridimensionamento delle immagini
+        torchvision.transforms.Resize((224, 224)),  # Transform images to 224x224
     ])
 
-    # Carica il dataset CIFAR-10
     if cfg.dataset.name == 'cifar10':
         test_dataset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
     elif cfg.dataset.name == 'cifar100':
         test_dataset = torchvision.datasets.CIFAR100(root=data_dir, train=False, download=True, transform=transform)
 
-    # Crea il DataLoader per il test
+    # dataloader
     test_loader = DataLoader(test_dataset, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
-    # Carica il modello
+    # Load model
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
     model.to(cfg.device)
 

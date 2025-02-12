@@ -16,7 +16,7 @@ from matplotlib.colors import TwoSlopeNorm
 
 # Function to compute the confusion matrix
 def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=False, device='cpu'):
-    model.eval()  # Modalità di valutazione
+    model.eval()  # Evaluation mode
     device = cfg.device
     model.to(device)
 
@@ -24,26 +24,24 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
     y_pred = []
 
     # Softmax
-    softmax = torch.nn.Softmax(dim=1)  # Creazione della funzione Softmax lungo la dimensione delle classi
+    softmax = torch.nn.Softmax(dim=1)  
     if cfg.dataset.name == 'cifar100':
         plt.rcParams["figure.figsize"] = (30, 30)
 
-    with torch.no_grad():  # Disabilita il calcolo del gradiente durante la valutazione
+    with torch.no_grad():  # Gradients disabled
         for x, y in data_loader:
             x, y = x.to(device), y.to(device)
-            logits = model(x)  # Output del modello (logits, non probabilità)
+            logits = model(x)  # Model's output (logits, not probabilities)
             
-            # Applicare Softmax per ottenere le probabilità
+            # Apply Softmax to have probabilities
             probs = softmax(logits)
             
-            # Le predizioni sono la classe con la probabilità massima
             preds = torch.argmax(probs, dim=1)
 
-            # Aggiungi i risultati alle liste
-            y_true.extend(y.cpu().numpy())  # Etichette vere
-            y_pred.extend(preds.cpu().numpy())  # Predizioni
+            y_true.extend(y.cpu().numpy())  # True labels
+            y_pred.extend(preds.cpu().numpy())  # Predictions
 
-    # Calcola la matrice di confusione
+    # Compute cm
     cm = confusion_matrix(y_true, y_pred)
 
     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=np.arange(0, cfg.dataset.classes))
@@ -57,7 +55,6 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
 
     current_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    # Salva la matrice di confusione in base al fatto che si stia facendo unlearning
     if save_plot:
         if unlearned:
             plt.savefig(f"src/data/confusion_matrix_postUnl_{cfg.unlearning_method}_{str(cfg.forgetting_set)}.png", dpi=300, bbox_inches='tight')
@@ -67,38 +64,34 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
             else:
                 plt.savefig(f"src/data/confusion_matrix_preUnl_{cfg.unlearning_method}_{str(cfg.forgetting_set)}_{cfg.unlearning_method}.png", dpi=300, bbox_inches='tight')
     
-    plt.close()  # Chiudi la figura per evitare sovrapposizioni
+    plt.close()
     return cm
 
 
 def difference_between_matrices(cm1, cm2):
     if cm1.shape != cm2.shape:
-        raise ValueError("Le due confusion matrix devono avere le stesse dimensioni.")
-    # Calcola la differenza
+        raise ValueError("The two confusion matrices must have the same shape")
     cm_diff = cm2 - cm1
     return cm_diff
 
 
 def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=5, positions=None):
     fig, axes = plt.subplots(rows, cols, figsize=(cols * 5, rows * 5))
-    axes = axes.flatten()  # Converti la griglia di assi in un array 1D
-
-    # Se le posizioni non sono specificate, usa un ordine sequenziale
+    axes = axes.flatten()  
+    
     if positions is None:
         positions = list(range(len(cms)))
 
-    # Trova i valori massimo e minimo tra tutte le confusion matrix per mantenere la scala coerente
+    # Find max and min values for normalization
     overall_min = min(cm.min() for cm in cms)
     overall_max = max(cm.max() for cm in cms)
 
-    # Crea una normalizzazione centrata su 0
+    # normalization
     norm = TwoSlopeNorm(vmin=overall_min, vcenter=0, vmax=overall_max)
 
-    # Aggiungi confusion matrix nelle posizioni specificate
     for i, pos in enumerate(positions):
         if i < len(cms) and pos < len(axes):
             ax = axes[pos]
-            # Usa la mappa di colori con TwoSlopeNorm
             im = ax.imshow(cms[i], interpolation='nearest', cmap=plt.cm.bwr, norm=norm)
             ax.set_title(f"Matrix {names[i]}")
             if labels is not None:
@@ -107,17 +100,15 @@ def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=
                 ax.set_xticklabels(labels)
                 ax.set_yticklabels(labels)
 
-            # Etichette
+            # Labels
             if cfg.dataset.name == 'cifar10':
                 for j in range(cms[i].shape[0]):
                     for k in range(cms[i].shape[1]):
                         ax.text(k, j, f"{cms[i][j, k]}", ha="center", va="center", color="black")
 
-    # Nascondi gli assi non utilizzati
     for j in range(len(cms), len(axes)):
         axes[j].axis('off')
 
-    # Salva la figura
     plt.savefig("src/data/differences_between_confusion_matrix_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
 
 def calculate_cm_error(test_dataloader, cm, nclasses):
@@ -153,14 +144,13 @@ def calculate_weighted_cm_error(test_dataloader, cm, embeddings_dissimilarity, n
 
 @hydra.main(config_path='../../config', config_name='config', version_base=None)
 def main(cfg):
-    # Percorso dei dati
+    # Data path
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     transform = torchvision.transforms.Compose([
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Resize((224, 224)),  # Ridimensionamento delle immagini
     ])
 
-    # Carica il dataset CIFAR-10
     if cfg.dataset.name == 'cifar10':
         test_dataset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
     elif cfg.dataset.name == 'cifar100':
@@ -168,10 +158,9 @@ def main(cfg):
     elif cfg.dataset.name == 'lfw':
         _, _, test_dataset = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
 
-    # Crea il DataLoader per il test
     test_loader = DataLoader(test_dataset, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
-    # Carica il modello
+    # Load model
     model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 

@@ -11,24 +11,24 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 class BadT(BaseUnlearningMethod):
     def __init__(self, opt, model, forgetting_subset, logger=None):
         super().__init__(opt, model)
-        print("Inizializzazione di BadT")
-        self.og_model = copy.deepcopy(model)  # Copio il modello originale
+        print("BadT initialization")
+        self.og_model = copy.deepcopy(model)  # copy the model
         self.og_model.to(self.opt.device)
-        self.og_model.eval()  # Metto il modello originale in modalità di valutazione
+        self.og_model.eval()  # put the model in evaluation mode
         self.forgetting_subset = forgetting_subset
         self.logger=logger
         
-        # Creo il modello random con pesi casuali
+        # create a random model
         self.random_model = copy.deepcopy(model)
         self.random_model.apply(self._random_weights_init)
         self.random_model.to(self.opt.device)
         self.random_model.eval() 
         
-        # Inizializzazione dell'ottimizzatore e scaler per mixed precision
+        # Initialize the optimizer, scheduler and scaler
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.opt.unlearn.lr, momentum=0.9, weight_decay=0.001)
         self.scheduler = ReduceLROnPlateau(self.optimizer, mode='min', factor=0.5, patience=10, verbose=False)
         self.scaler = GradScaler()
-        self.kltemp = opt.unlearn.temp  # Temperatura per la KL-divergenza (knowledge distillation)
+        self.kltemp = opt.unlearn.temp  # Temperature for KL-divergenza (knowledge distillation)
 
     def _random_weights_init(self, model):
         if isinstance(model, nn.Conv2d) or isinstance(model, nn.Linear):
@@ -39,19 +39,19 @@ class BadT(BaseUnlearningMethod):
     def forward_pass(self, sample, target, infgt):
         output = self.model(sample)
         
-        # Calcolo dei logit dei due modelli (originale e random)
+        # Calculate logits (original e random)
         full_teacher_logits = self.og_model(sample)
         unlearn_teacher_logits = self.random_model(sample)
         
-        # Applico softmax con temperatura ai logit
+        # Apply softmax 
         f_teacher_out = torch.nn.functional.softmax(full_teacher_logits / self.kltemp, dim=1)
         u_teacher_out = torch.nn.functional.softmax(unlearn_teacher_logits / self.kltemp, dim=1)
         
-        # Seleziono quale output del modello usare in base a infgt
+        # Select which output to use depending from infgt
         labels = torch.unsqueeze(infgt, 1)
         overall_teacher_out = labels * u_teacher_out + (1 - labels) * f_teacher_out
         
-        # Calcolo la perdita con la KL-divergenza
+        # Calculate loss with KL-divergence
         student_out = F.log_softmax(output / self.kltemp, dim=1)
         loss = F.kl_div(student_out, overall_teacher_out)
         return output,loss
@@ -59,21 +59,19 @@ class BadT(BaseUnlearningMethod):
 
 
     def train_one_epoch(self, loader):
-            print("Inizio epoca di training")
-            self.model.train()  # Imposta il modello in modalità training
+            self.model.train()  # Set the model in training mode
 
-            # Ciclo principale su ogni batch del loader
             for inputs, labels, infgt in tqdm.tqdm(loader):
                 inputs, labels, infgt = inputs.to(self.opt.device), labels.to(self.opt.device), infgt.to(self.opt.device)
                 with autocast(): 
-                    # Azzeramento dei gradienti
+                    # reset gradients
                     self.optimizer.zero_grad()
-                    # Eseguiamo il forward pass e calcoliamo la perdita
+                    # Execute the forward pass
                     preds, loss = self.forward_pass(inputs, labels, infgt)
                     self.logger.log_metrics({"method":"BadT", "loss": loss.item()}, step=self.curr_step)
-                    self.scaler.scale(loss).backward()  #calcolo i gradienti e applico la backpropagation
-                    self.scaler.step(self.optimizer) #aggiorno i pesi
-                    self.scaler.update() #aggiorno lo scaler
-            self.scheduler.step(loss) #aggiorno il learning rate
-            print(f'Epoca: {self.epoch}')
+                    self.scaler.scale(loss).backward()  # forward pass and backpropagation
+                    self.scaler.step(self.optimizer) #update weights
+                    self.scaler.update() # update scaler
+            self.scheduler.step(loss) # update learning rate
+            print(f'Epoch: {self.epoch}')
             return
