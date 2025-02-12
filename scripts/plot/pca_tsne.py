@@ -4,13 +4,22 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.manifold import TSNE
+import hydra
 from datetime import datetime
+import os
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+from src.datasets.dataset import load_dataset
+from src.models.classifier import Classifier
 
-def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=False): 
+
+def plot_features_3d(cfg, model, data_loader, pca=None, unlearned=False): 
     model.eval()  
 
     all_features = []
     all_labels = []
+
+    forgetting_subset = cfg.forgetting_set
 
     # Device setting
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -75,26 +84,36 @@ def plot_features_3d(model, data_loader, forgetting_subset, pca=None, unlearned=
         ax.set_zlabel(f't-SNE Component {z_comp + 1}')
         ax.set_title(f't-SNE 3D - View {i}')
         ax.grid(True)
-        ax.legend(loc='best')  # Aggiungi la legenda qui
+        ax.legend(loc='best')  
 
     # Save the plot with timestamp
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if unlearned:
-        plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
+        if cfg.unlearning_method=="icus":
+            plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
     else:
-        plt.savefig('fig/feature_plot_3d_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
-    
+        if cfg.golden_model==False:
+            if cfg.unlearning_method=="icus":
+                plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
+            else:
+                plt.savefig('fig/feature_plot_3d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_golden.png')
     # Show the plot
     plt.show()
     if not unlearned:
         return pca
 
 
-def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=False, shared_limits=None): 
+def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_limits=None): 
     model.eval()  
 
     all_features = []
     all_labels = []
+
+    forgetting_subset = cfg.forgetting_set
 
     # Device setting
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -165,10 +184,13 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
         ax.set_ylim(shared_limits["tsne"][y_comp])
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    if unlearned:
-        plt.savefig('fig/feature_plot_2d_unlearned_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
+    if not unlearned:
+        plt.savefig('fig/feature_plot_2d_original_'+cfg.dataset.name+'.png')
     else:
-        plt.savefig('fig/feature_plot_3d_forgetting_set_size_'+str(len(forgetting_subset))+'_'+timestamp+'.png')
+        if cfg.golden_model==False:
+            plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
+        else:
+            plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_golden.png')
     plt.show()
 
     if not unlearned:
@@ -176,3 +198,36 @@ def plot_features(model, data_loader, forgetting_subset, pca=None, unlearned=Fal
     else:
         return None
 
+@hydra.main(config_path='../../config', config_name='config')
+def main(cfg):
+    print("Directory corrente:", os.getcwd())
+    os.chdir('../../..')
+    # Verifica se è stato cambiato correttamente
+    print("Nuova directory:", os.getcwd())
+    data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
+    _, _, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
+    
+    # Data loaders
+    test_loader = torch.utils.data.DataLoader(test, 
+        batch_size=cfg.train.batch_size, 
+        shuffle=False, 
+        num_workers=cfg.train.num_workers)
+    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model.to(cfg.device)
+    weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
+    model.load_state_dict(torch.load(weights, map_location=cfg.device))
+    pca, shared_limits = plot_features(cfg, model, test_loader, unlearned=False)
+    #pca = plot_features_3d(cfg, model, test_loader)
+    if cfg.golden_model==True:
+        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name +'_resnet_only_retain_set'+str(cfg.forgetting_set)+ '.pth')
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+        #plot_features_3d(cfg,model, test_loader, pca, True)
+    elif cfg.original_model==False:
+        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_'+str(cfg.forgetting_set) +'_'+cfg.unlearning_method+ '_resnet.pth')
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+        #plot_features_3d(cfg,model, test_loader, pca, True)
+
+if __name__ == "__main__":
+    main()

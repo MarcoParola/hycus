@@ -148,6 +148,36 @@ def add_case(data, dataset, unlearning_method, forgetting_set, accuracy_retain, 
 
     return False
 
+def calculate_l2_distance(model_path_1, model_path_2):
+    state_dict_1 = torch.load(model_path_1)
+    state_dict_2 = torch.load(model_path_2)
+
+    if state_dict_1.keys() != state_dict_2.keys():
+        raise ValueError("The two models have different structures or different keys in their state_dict.")
+
+    l2_distance = 0.0
+    for key in state_dict_1.keys():
+        weight_diff = state_dict_1[key] - state_dict_2[key]
+        l2_distance += torch.sum(weight_diff ** 2).item()
+    
+    l2_distance = l2_distance ** 0.5
+    return l2_distance
+
+
+def calculate_shannon_divergence(features_path_1, features_path_2):
+    features_1 = torch.load(features_path_1)
+    features_2 = torch.load(features_path_2)
+
+    if features_1.shape != features_2.shape:
+        raise ValueError("The two feature tensors have different shapes.")
+
+    P = F.softmax(features_1, dim=-1)
+    Q = F.softmax(features_2, dim=-1)
+
+    kl_pq = torch.sum(P * torch.log(P / Q), dim=-1)
+    kl_qp = torch.sum(Q * torch.log(Q / P), dim=-1)
+    shannon_divergence = 0.5 * (kl_pq + kl_qp).mean().item()
+    return shannon_divergence
 
 def calculate_aus(data, dataset, unlearning_method, forgetting_set):
     if dataset not in data["datasets"]:
@@ -162,15 +192,14 @@ def calculate_aus(data, dataset, unlearning_method, forgetting_set):
     return (1 - (original["accuracy_retain"] - unl["accuracy_retain"])) / (1 + abs(unl["accuracy_forget"]))
 
 
-    
 
 @hydra.main(config_path='../../config', config_name='config', version_base=None)
 def main(cfg):
-    
+    """
     for method in ["icus", "scrub", "ssd", "badT"]:
         aus=calculate_aus(method, str(cfg.forgetting_set))
         print("Method: "+method+" AUS: "+str(aus))
-    """
+    
     #CODICI USATI PER TESTARE CHE ANDASSE
     print("Modifica test")
     with open("src/metrics/metrics.json", "r") as file:
@@ -181,6 +210,23 @@ def main(cfg):
     print(done)
     """
 
+    #Here for shannon divergence and l2 distance
+    if cfg.dataset.name == "cifar100":
+        unlearning_method = ["icus", "scrub", "badT", "icus_hierarchy", "finetuning"]
+    elif cfg.dataset.name == "cifar10" and int(cfg.forgetting_set_size) > 2:
+        unlearning_method = ["icus", "scrub", "badT","finetuning"]
+    elif cfg.dataset.name == "cifar10" and int(cfg.forgetting_set_size) <= 2:
+        unlearning_method = ["icus", "scrub", "ssd", "badT", "finetuning"]
+    elif cfg.dataset.name == "lfw":
+        unlearning_method = ["icus", "scrub", "badT"]
+    else:
+        raise ValueError("Not supported settings")
+    
+    for u in unlearning_method:
+        l2_distance = calculate_l2_distance("checkpoints/"+cfg.dataset.name+"_"+cfg.model+"_only_retain_set"+str(cfg.forgetting_set)+".pth", "checkpoints/"+cfg.dataset.name+"_forgetting_set_"+str(cfg.forgetting_set)+"_"+u+"_"+cfg.model+".pth")
+        print("L2 distance "+u+": ", l2_distance)
+        shannon_divergence = calculate_shannon_divergence("data/features/"+cfg.dataset.name+"/test_features_"+u+"_"+str(cfg.forgetting_set)+".pt", "data/features/"+cfg.dataset.name+"/test_features_only_retain_forgetting_"+str(cfg.forgetting_set)+".pt")
+        print("Shannon divergence "+u+": ", shannon_divergence)
 
 if __name__ == '__main__':
     main()

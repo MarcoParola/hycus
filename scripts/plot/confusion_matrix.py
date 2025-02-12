@@ -14,13 +14,12 @@ from src.models.classifier import Classifier
 from scripts.descr_and_similarity import calculate_embeddings, calculate_dissimilarity
 from matplotlib.colors import TwoSlopeNorm
 
-# Funzione per calcolare la matrice di confusione
+# Function to compute the confusion matrix
 def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=False, device='cpu'):
     model.eval()  # Modalità di valutazione
     device = cfg.device
     model.to(device)
 
-    # Liste per raccogliere le etichette vere e le predizioni
     y_true = []
     y_pred = []
 
@@ -121,6 +120,20 @@ def plot_multiple_confusion_matrices(cms, cfg, names, labels=None, rows=2, cols=
     # Salva la figura
     plt.savefig("src/data/differences_between_confusion_matrix_" + str(cfg.forgetting_set) + ".png", dpi=300, bbox_inches='tight')
 
+def calculate_cm_error(test_dataloader, cm, nclasses):
+    class_counts = np.zeros(nclasses)  
+    for _, labels in test_dataloader:
+        for label in labels:
+            class_counts[label] += 1
+    cm = cm.astype(float)
+    for i in range(nclasses):
+        cm[i] = cm[i] / class_counts[i]
+    error = 0
+    for i in range(nclasses):
+        for j in range(nclasses):
+            error += abs(cm[i][j])
+    error = error / (nclasses*nclasses)
+    return error
 
 def calculate_weighted_cm_error(test_dataloader, cm, embeddings_dissimilarity, nclasses):
     class_counts = np.zeros(nclasses)  
@@ -135,7 +148,6 @@ def calculate_weighted_cm_error(test_dataloader, cm, embeddings_dissimilarity, n
         for j in range(nclasses):
             error += embeddings_dissimilarity[i][j] * abs(cm[i][j])
     error = error / (nclasses*nclasses)
-    print("Weighted error: ", error)
     return error
 
 
@@ -153,12 +165,14 @@ def main(cfg):
         test_dataset = torchvision.datasets.CIFAR10(root=data_dir, train=False, download=True, transform=transform)
     elif cfg.dataset.name == 'cifar100':
         test_dataset = torchvision.datasets.CIFAR100(root=data_dir, train=False, download=True, transform=transform)
+    elif cfg.dataset.name == 'lfw':
+        _, _, test_dataset = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
 
     # Crea il DataLoader per il test
     test_loader = DataLoader(test_dataset, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
     # Carica il modello
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 
     #ESEGUI PER SINGOLA CONFUSION MATRIX
@@ -180,73 +194,132 @@ def main(cfg):
     
     #ESEGUI PER DIFFERENZA TRA LE CONFUSION MATRIX
     cms=[]
+    cm1=cm2=cm3=cm4=cm5=cm6=cm11=cm12=None
+    names=[]
     #original
     weights= os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_{cfg.model}.pth")
-    model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    cm1 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm1)
+    if os.path.exists(weights):
+        names.append("original")
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm1 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm1)
     
     #scrub
     weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_scrub_{cfg.model}.pth")
-    model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    cm2 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm2)
+    if os.path.exists(weights):
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm2 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm2)
+        names.append("scrub")
 
     #ssd
-    weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_ssd_{cfg.model}.pth")
-    model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    cm3 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm3)
+    if cfg.forgetting_set_size < 3:
+        weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_ssd_{cfg.model}.pth")
+        if os.path.exists(weights):
+            model.load_state_dict(torch.load(weights, map_location=cfg.device))
+            cm3 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+            cms.append(cm3)
+            names.append("ssd")
 
     #badT
     weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_badT_{cfg.model}.pth")
-    model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    cm4 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm4)
+    if os.path.exists(weights):
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm4 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm4)
+        names.append("badT")
 
     #icus
     weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_icus_{cfg.model}.pth")
-    model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    cm5 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm5)
+    if os.path.exists(weights):
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm5 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm5)
+        names.append("icus")
+    
+    #icus hierarchy
+    weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_icus_hierarchy_{cfg.model}.pth")
+    if os.path.exists(weights):
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm11 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm11)
+        names.append("icus hierarchy")
+
+    #finetuning
+    weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_forgetting_set_{cfg.forgetting_set}_finetuning_{cfg.model}.pth")
+    if os.path.exists(weights):
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm12 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm12)
+        names.append("finetuning")
 
     #golden
     weights=os.path.join(cfg.currentDir, cfg.train.save_path, f"{cfg.dataset.name}_{cfg.model}_only_retain_set{cfg.forgetting_set}.pth")
-    model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    cm6 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
-    cms.append(cm6)
+    if os.path.exists(weights):
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+        cm6 = compute_confusion_matrix(model, test_loader, cfg, save_plot=False)
+        cms.append(cm6)
+        names.append("golden")
 
     embeddings = calculate_embeddings(cfg.dataset.name)
     embeddings = embeddings.mean(dim=1)
     embeddings_dissimilarity = calculate_dissimilarity(embeddings)
 
     #differenza tra golden e scrub
-    cm7 = difference_between_matrices(cm6, cm2)
-    cms.append(cm7)
-    cm_aux=cm7
-    print("Errore pesato scrub: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+    if cm2 is not None:
+        cm7 = difference_between_matrices(cm6, cm2)
+        cms.append(cm7)
+        cm_aux=cm7
+        print("Unweighted error scrub: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted scrub: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        names.append("golden-scrub")
 
     #differenza tra golden e ssd
-    cm8 = difference_between_matrices(cm6, cm3)
-    cms.append(cm8)
-    cm_aux=cm8
-    print("Errore pesato ssd: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+    if cm3 is not None:
+        cm8 = difference_between_matrices(cm6, cm3)
+        cms.append(cm8)
+        cm_aux=cm8
+        print("Unweighted error ssd: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error ssd: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        names.append("golden-ssd")
 
     #differenza tra golden e badT
-    cm9 = difference_between_matrices(cm6, cm4)
-    cms.append(cm9)
-    cm_aux=cm9
-    print("Errore pesato badT: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+    if cm4 is not None:
+        cm9 = difference_between_matrices(cm6, cm4)
+        cms.append(cm9)
+        cm_aux=cm9
+        print("Unweighted error badT: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error badT: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        names.append("golden-badT")
 
     #differenza tra golden e icus
-    cm10 = difference_between_matrices(cm6, cm5)
-    cms.append(cm10)
-    cm_aux=cm10
-    print("Errore pesato icus: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+    if os.path.exists(weights):
+        cm10 = difference_between_matrices(cm6, cm5)
+        cms.append(cm10)
+        cm_aux=cm10
+        print("Unweighted error icus: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error icus: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        names.append("golden-icus")
+    
+    #differenza tra golden e icus hierarchy
+    if cm11 is not None:
+        cm12 = difference_between_matrices(cm6, cm11)
+        cms.append(cm12)
+        cm_aux=cm12
+        print("Unweighted error Icus hierarchy: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error Icus hierarchy: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        names.append("golden-icus hierarchy")
+    
+    #differenza tra golden e finetuning
+    if cm12 is not None:
+        cm13 = difference_between_matrices(cm6, cm12)
+        cms.append(cm13)
+        cm_aux=cm13
+        print("Unweighted error finetuning: ", calculate_cm_error(test_loader, cm_aux, cfg.dataset.classes))
+        print("Weighted error finetuning: ", calculate_weighted_cm_error(test_loader, cm_aux, embeddings_dissimilarity, cfg.dataset.classes))
+        names.append("golden-finetuning")
 
-    names=["original", "scrub", "ssd", "badT", "icus", "golden", "golden-scrub", "golden-ssd", "golden-badT", "golden-icus"]
-
-    plot_multiple_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=5)
+    plot_multiple_confusion_matrices(cms, cfg, names, labels=np.arange(cfg.dataset.classes), rows=2, cols=len(names)//2)
     
 
 if __name__ == '__main__':

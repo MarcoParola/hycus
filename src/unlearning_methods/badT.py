@@ -59,7 +59,6 @@ class BadT(BaseUnlearningMethod):
 
 
     def train_one_epoch(self, loader):
-            """Esegue un'epoca di training su un loader."""
             print("Inizio epoca di training")
             self.model.train()  # Imposta il modello in modalità training
 

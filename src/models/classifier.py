@@ -96,24 +96,6 @@ class Classifier(torch.nn.Module):
         return features
 
     def get_weights(self, nclasses, nlayers):
-        
-        if self.model_name == 'resnet18':
-            x = self.model.conv1(x)
-            x = self.model.bn1(x)
-            x = self.model.relu(x)
-            x = self.model.maxpool(x)
-            x = self.model.layer1(x)
-            x = self.model.layer2(x)
-            x = self.model.layer3(x)
-            x = self.model.layer4(x)
-            features = self.model.avgpool(x)
-            features = features.view(features.size(0), -1)
-            return features
-        else:
-            raise NotImplementedError(f"Extract features non è implementato per il modello {self.model_name}.")
-
-
-    def get_weights(self, nclasses, nlayers):
         shared = torch.empty(0)
         distinct = torch.empty(0)
         if torch.cuda.is_available():
@@ -123,31 +105,29 @@ class Classifier(torch.nn.Module):
         if self.model_name == 'resnet18':
             for l in nlayers:
                 if l == 1:
-                    w = self.model.fc[0].weight.data  # Forma [10, 512]
-                    bias = self.model.fc[0].bias.data  # Forma [10]
-
+                    w = self.model.fc[0].weight.data  
+                    bias = self.model.fc[0].bias.data  
                     bias = bias.unsqueeze(1) 
-                    print("Bias shape:", bias.shape)
 
                     if distinct.numel() == 0: 
                         distinct = torch.cat([w, bias], dim=1)  
                     else:
                         distinct = torch.cat([distinct, w, bias], dim=1)
-                    print("Distinct shape:", distinct.shape)
+
                 elif l==2:
                     shared=torch.cat((shared, self.model.layer4[1].bn2.weight.data.view(-1)))
                     shared=torch.cat((shared, self.model.layer4[1].bn2.bias.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
                 elif l==3:
                     shared=torch.cat((shared, self.model.layer4[1].conv2.weight.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
                 elif l==4:
                     shared=torch.cat((shared, self.model.layer2[1].bn1.weight.data.view(-1)))
                     shared=torch.cat((shared, self.model.layer2[1].bn1.bias.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
                 elif l==5:
                     shared=torch.cat((shared, self.model.layer1[1].conv1.weight.data.view(-1)))
-                    print("Shared shape:", shared.shape)
+
         elif self.model_name == 'efficientnet_b0':
             pass
         

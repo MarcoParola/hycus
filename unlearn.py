@@ -18,17 +18,16 @@ from src.datasets.unlearning_dataset import UnlearningDataset
 from src.datasets.unlearning_dataset import get_unlearning_dataset
 from src.models.resnet import ResNet9, ResNet18, ResidualBlock 
 from src.models.classifier import Classifier
-from src.unlearning_methods.icus import Icus
+from src.unlearning_methods.icus import Icus, IcusHierarchy
 
 
 
 @hydra.main(config_path='config', config_name='config', version_base=None)
 def main(cfg):
     # Set seed
-    torch.cuda.empty_cache() #TBR
+    torch.cuda.empty_cache() 
     if cfg.seed == -1:
         random_data = os.urandom(4)
-        print("Random classes: ", random_data)
         seed = int.from_bytes(random_data, byteorder="big")
         cfg.seed = seed
     torch.manual_seed(cfg.seed)    
@@ -40,6 +39,7 @@ def main(cfg):
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     train, val, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
     
+    # Data loaders
     test_loader = torch.utils.data.DataLoader(test, 
         batch_size=cfg.train.batch_size, 
         shuffle=False, 
@@ -55,8 +55,9 @@ def main(cfg):
         shuffle=False, 
         num_workers=cfg.train.num_workers)
 
+    # Load model
     print("Model loading")
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
     # load model weights
     weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
@@ -69,8 +70,8 @@ def main(cfg):
         print(f'{k}: {v}')
 
     # Plotting
-    pca, shared_limits = plot_features(model, test_loader, forgetting_subset, unlearned=False)
-    pca=plot_features_3d(model, test_loader, forgetting_subset)
+    pca, shared_limits = plot_features(cfg, model, test_loader, unlearned=False)
+    pca=plot_features_3d(cfg, model, test_loader)
     
     #prepare datasets for unlearning
     print("Wrapping datasets")
@@ -82,12 +83,15 @@ def main(cfg):
     unlearning_method_name = cfg.unlearning_method
     unlearning_train = get_unlearning_dataset(cfg, unlearning_method_name, model, train, retain_indices, forget_indices, forgetting_subset)
     
+    #retain and forget set loaders
     retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
     
     # unlearning process
     unlearning_method = get_unlearning_method(cfg, unlearning_method_name, model, unlearning_train, forgetting_subset, loggers)
     new_model = None
     if unlearning_method_name == 'icus':
+        new_model = unlearning_method.unlearn(model, unlearning_train, val_loader)
+    if unlearning_method_name == 'icus_hierarchy':
         new_model = unlearning_method.unlearn(model, unlearning_train, val_loader)
     elif unlearning_method_name == 'scrub':
         new_model = unlearning_method.unlearn(retain_loader, forget_loader, val_loader) 
@@ -107,25 +111,27 @@ def main(cfg):
         retain_loader, forget_loader = get_retain_forget_dataloaders(cfg, retain_dataset, forget_dataset)
         new_model = unlearning_method.unlearn(model, unlearning_train, test_loader, forget_loader)
         forgetting_subset.extend(cfg.unlearn.already_forgotten_classes) 
-        print(forgetting_subset)
     
-    plot_features(new_model, test_loader, forgetting_subset, pca=pca, unlearned=True, shared_limits=shared_limits)
-    plot_features_3d(new_model, test_loader, forgetting_subset, pca, True)
+    plot_features(cfg, new_model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)
+    plot_features_3d(cfg, new_model, test_loader, pca, True)
     
+    # Save new model
     os.makedirs(os.path.join(cfg.currentDir, cfg.train.save_path), exist_ok=True)
     if cfg.unlearning_method == 'ssd':
         torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(forgetting_subset) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))    
     else:
-        torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' + cfg.model + '.pth'))
+        if cfg.unlearning_method != 'icus':
+            torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_'+ cfg.model + '.pth'))
+        if cfg.unlearning_method == 'icus' and cfg.unlearn.reconstruct_from_d == False:
+            torch.save(new_model.state_dict(), os.path.join(cfg.currentDir, cfg.train.save_path,"nuovi", cfg.dataset.name + '_forgetting_set_' + str(cfg.forgetting_set) +'_'+cfg.unlearning_method+'_' +cfg.unlearn.aggregation_method+ '_'  + cfg.model + '.pth'))
     
+    # log metrics
     metrics = compute_metrics(new_model, test_loader, num_classes, forgetting_subset)
     loggers.log_metrics({
             "retain_test_accuracy": metrics['accuracy_retaining'],
             "forget_test_accuracy": metrics['accuracy_forgetting'],
             "step": 0
         })
-    print("Accuracy forget ", metrics['accuracy_forgetting'])
-    print("Accuracy retain ", metrics['accuracy_retaining'])
 
     if cfg.unlearn.update_json == True:
         with open("src/metrics/metrics.json", "r") as file:

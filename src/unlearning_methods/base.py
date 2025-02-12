@@ -5,8 +5,10 @@ from torch.cuda.amp import autocast
 import numpy as np
 import torchmetrics
 import copy
+import json
 import tqdm
 import time
+import os
 from src.metrics.metrics import compute_metrics
 from src.utils import LinearLR
 
@@ -180,11 +182,11 @@ class BaseUnlearningMethod(ABC):
         
         self.model.train()  
         
-def get_unlearning_method(cfg, method_name, model, unlearning_train, forgetting_set, logger=None):
+def get_unlearning_method(cfg, method_name, model, unlearning_train, forgetting_set, logger):
     from src.unlearning_methods.scrub import Scrub
     from src.unlearning_methods.badT import BadT
     from src.unlearning_methods.ssd import SSD
-    from src.unlearning_methods.icus import Icus
+    from src.unlearning_methods.icus import Icus, IcusHierarchy
     if method_name == 'scrub':
         return Scrub(cfg, model, forgetting_set, logger)
     elif method_name == 'badT':
@@ -193,6 +195,10 @@ def get_unlearning_method(cfg, method_name, model, unlearning_train, forgetting_
         return SSD(cfg, model, logger)
     elif method_name == 'icus':
         return Icus(cfg, model, 128, cfg.dataset.classes, unlearning_train, forgetting_set, logger)
+    elif method_name == 'icus_hierarchy':
+        with open("data/cifar20_classes.json", "r") as file:
+            dictionary = json.load(file) 
+        return IcusHierarchy(dictionary, cfg, model, 128, cfg.dataset.classes, unlearning_train, forgetting_set, logger)
     else:
         raise ValueError(f"Unlearning method '{method_name}' not recognised.")
     return None

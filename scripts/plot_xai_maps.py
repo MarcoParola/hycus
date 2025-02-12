@@ -20,8 +20,5 @@ def main(cfg):
     print(method)
 
     
-
-    
-
 if __name__ == '__main__':
     main()
