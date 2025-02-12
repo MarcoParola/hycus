@@ -88,6 +88,15 @@ def main(cfg):
     wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project+'_svm', config=flat_config)
 
     # Caricamento dei dati
+<<<<<<< HEAD
+    if cfg.unlearning_method == 'retrain': #Caso del golden model
+        train_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
+        train_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
+        validation_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
+        validation_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
+        test_features = torch.load('data/features/cifar10/only_retain_set_features'+str(cfg.forgetting_set)+'.pt')
+        test_labels = torch.load('data/features/cifar10/only_retain_set_labels'+str(cfg.forgetting_set)+'.pt')
+=======
     if cfg.golden_model==True: #Caso del golden model
         train_features = torch.load('data/features/'+str(cfg.dataset.name)+'/train_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
         train_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/train_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
@@ -95,6 +104,7 @@ def main(cfg):
         validation_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/val_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
         test_features = torch.load('data/features/'+str(cfg.dataset.name)+'/test_features_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
         test_labels = torch.load('data/features/'+str(cfg.dataset.name)+'/test_labels_only_retain_forgetting_'+str(cfg.forgetting_set)+'.pt')
+>>>>>>> 0709529d6df5ffeab555d533a96135ba91ff7a64
     else:
         if cfg.original_model==True: #Caso del modello originale
             train_features = torch.load('data/features/'+str(cfg.dataset.name)+'/train_features_original.pt')

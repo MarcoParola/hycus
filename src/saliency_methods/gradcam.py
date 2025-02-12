@@ -55,7 +55,7 @@ def main(cfg):
     device = torch.device(cfg.device if torch.cuda.is_available() else "cpu")
     model = model.to(device).eval()
 
-    # Load ICUSA UNLEARNED model
+    # Load ICUS UNLEARNED model
     model_unlearned_icus = Classifier(
         cfg.weights_name,
         num_classes=cfg[cfg.dataset.name].n_classes,

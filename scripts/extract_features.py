@@ -56,8 +56,13 @@ def main(cfg):
         shuffle=False, 
         num_workers=cfg.train.num_workers)
 
+<<<<<<< HEAD
+    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    if cfg.unlearning_method == 'retrain':
+=======
     model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     if cfg.golden_model==True:
+>>>>>>> 0709529d6df5ffeab555d533a96135ba91ff7a64
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_resnet_only_retain_set'+str(cfg.forgetting_set)+'.pth')
     else:
         if cfg.original_model==True:
@@ -70,7 +75,7 @@ def main(cfg):
 
     # train features extraction
     features, labels = extract_features(model, train_loader, cfg.device)
-    if cfg.golden_model==True:
+    if cfg.unlearning_method == 'retrain':
         torch.save(features, f"data/features/{cfg.dataset.name}/train_features_only_retain_forgetting_{cfg.forgetting_set}.pt")
         torch.save(labels, f"data/features/{cfg.dataset.name}/train_labels_only_retain_forgetting_{cfg.forgetting_set}.pt")
     else:
@@ -87,7 +92,7 @@ def main(cfg):
         torch.save(features, f"data/features/{cfg.dataset.name}/val_features_original.pt")
         torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_original.pt")
     else:
-        if cfg.golden_model==True:
+        if cfg.unlearning_method == 'retrain':
             torch.save(features, f"data/features/{cfg.dataset.name}/val_features_only_retain_forgetting_{cfg.forgetting_set}.pt")
             torch.save(labels, f"data/features/{cfg.dataset.name}/val_labels_only_retain_forgetting_{cfg.forgetting_set}.pt")
         else:
@@ -96,7 +101,7 @@ def main(cfg):
 
     # test features extraction
     features, labels = extract_features(model, test_loader, cfg.device)
-    if cfg.golden_model==True:
+    if cfg.unlearning_method == 'retrain':
         torch.save(features, f"data/features/{cfg.dataset.name}/test_features_only_retain_forgetting_{cfg.forgetting_set}.pt")
         torch.save(labels, f"data/features/{cfg.dataset.name}/test_labels_only_retain_forgetting_{cfg.forgetting_set}.pt")
     else:

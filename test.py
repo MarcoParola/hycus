@@ -25,7 +25,7 @@ def main(cfg):
     model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 
-    if cfg.golden_model:
+    if cfg.unlearning_method == 'retrain':
         model.load_state_dict(torch.load('checkpoints/'+cfg.dataset.name+'_'+cfg.model+'_only_retain_set'+str(cfg.forgetting_set)+'.pth'))  # Carica i pesi dal file .pth
     elif cfg.original_model:
         model.load_state_dict(torch.load('checkpoints/'+cfg.dataset.name+'_'+cfg.model+'.pth')) 

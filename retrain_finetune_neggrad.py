@@ -12,6 +12,7 @@ from tqdm import tqdm
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
 from src.metrics.metrics import compute_metrics
+from src.loss.loss import NegGradLoss, NegGradPlusLoss
 from src.log import get_loggers
 from omegaconf import OmegaConf
 
@@ -34,33 +35,48 @@ def main(cfg):
     forgetting_set = get_forgetting_subset(cfg.forgetting_set, cfg.dataset.classes, cfg.forgetting_set_size)
     print("Forgetting set: "+str(forgetting_set))
 
-    # index to be maintained
-    idx_train = [i for i, t in enumerate(train.targets) if t not in forgetting_set]
-    if cfg.unlearning_method != 'finetuning':
+    
+    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model.to(cfg.device)
+
+
+    optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
+    criterion = None
+
+    
+
+    if cfg.unlearning_method == 'retrain' or cfg.unlearning_method == 'finetuning':
+        criterion = torch.nn.CrossEntropyLoss()
+        # Crea una lista di indici che non appartengono al forgetting_set
+        idx_train = [i for i, t in enumerate(train.targets) if t not in forgetting_set]
         idx_val = [i for i, t in enumerate(val.targets) if t not in forgetting_set]
         idx_test = [i for i, t in enumerate(test.targets) if t not in forgetting_set]
-
-    # filter dataset
-    train = Subset(train, idx_train)
-    if cfg.unlearning_method != 'finetuning':
+        train = Subset(train, idx_train)
         val = Subset(val, idx_val)
         test = Subset(test, idx_test)
+
+    if cfg.unlearning_method != 'retrain':
+        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
+        model.load_state_dict(torch.load(weights, map_location=cfg.device))
+
+    if cfg.unlearning_method == 'neggrad':
+        criterion = NegGradLoss()
+        idx_train = [i for i, t in enumerate(train.targets) if t in forgetting_set]
+        idx_val = [i for i, t in enumerate(val.targets) if t in forgetting_set]
+        idx_test = [i for i, t in enumerate(test.targets) if t in forgetting_set]
+        train = Subset(train, idx_train)
+        val = Subset(val, idx_val)
+        test = Subset(test, idx_test)
+        criterion = NegGradLoss()
+    if cfg.unlearning_method == 'neggradplus':
+        criterion = NegGradPlusLoss(cfg[cfg.dataset.name].n_classes, forgetting_set)
+
 
     # dataloader of filtered dataset
     train_loader = DataLoader(train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=cfg.train.num_workers)
     val_loader = DataLoader(val, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
 
-    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
-    model.to(cfg.device)
-
-    # finetuning case
-    if cfg.unlearning_method == 'finetuning':
-        weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
-        model.load_state_dict(torch.load(weights, map_location=cfg.device))
-
-    optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
-    criterion = torch.nn.CrossEntropyLoss()
 
     # Early stopping
     if cfg.unlearning_method != 'finetuning':

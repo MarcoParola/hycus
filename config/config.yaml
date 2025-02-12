@@ -12,7 +12,6 @@ unlearning_method: icus
 forgetting_set_strategy: random_class
 forgetting_set: [4,22,49,51,63,68,72,79,88,93]
 forgetting_set_size: 10
-golden_model: False
 original_model: False
 
 dataset: 

@@ -59,7 +59,7 @@ def compute_confusion_matrix(model, data_loader, cfg, save_plot=True, unlearned=
         if unlearned:
             plt.savefig(f"src/data/confusion_matrix_postUnl_{cfg.unlearning_method}_{str(cfg.forgetting_set)}.png", dpi=300, bbox_inches='tight')
         else:
-            if cfg.golden_model==True:
+            if cfg.unlearning_method == 'retrain':
                 plt.savefig(f"src/data/confusion_matrix_golden_{str(cfg.forgetting_set)}.png", dpi=300, bbox_inches='tight')
             else:
                 plt.savefig(f"src/data/confusion_matrix_preUnl_{cfg.unlearning_method}_{str(cfg.forgetting_set)}_{cfg.unlearning_method}.png", dpi=300, bbox_inches='tight')
