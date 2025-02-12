@@ -5,7 +5,7 @@ import torch.nn as nn
 class NegGradLoss(nn.Module):
     """NegGradLoss or negative cross entropy loss, to be applied only on the forget samples"""
     def __init__(self):
-        super(NegaGradLoss, self).__init__()
+        super(NegGradLoss, self).__init__()
         self.ce_loss = nn.CrossEntropyLoss()
 
     def forward(self, inputs, targets):
