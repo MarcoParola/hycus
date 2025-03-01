@@ -36,7 +36,7 @@ def main(cfg):
     print("Forgetting set: "+str(forgetting_set))
 
     
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     model.to(cfg.device)
 
 

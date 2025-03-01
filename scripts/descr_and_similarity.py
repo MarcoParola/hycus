@@ -10,7 +10,7 @@ def calculate_embeddings(dataset_name):
     model = BertModel.from_pretrained('bert-base-uncased')
 
     # List of words to encode
-    if dataset_name=='cifar10' or dataset_name=='cifar100' or dataset_name=='lfw':
+    if dataset_name=='cifar10' or dataset_name=='cifar100' or dataset_name=='lfw' or dataset_name=='ageDB':
         path = "data/"+dataset_name+"_classes.txt"
         classes = load_words_to_array(path)
     
