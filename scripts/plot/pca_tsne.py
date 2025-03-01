@@ -94,7 +94,7 @@ def plot_features_3d(cfg, model, data_loader, pca=None, unlearned=False):
         else:
             plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
     else:
-        if cfg.golden_model==False:
+        if cfg.unlearning_method != 'retrain':
             if cfg.unlearning_method=="icus":
                 plt.savefig('fig/feature_plot_3d_unlearned_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'_'+cfg.unlearn.aggregation_method+'.png')
             else:
@@ -187,7 +187,7 @@ def plot_features(cfg, model, data_loader, pca=None, unlearned=False, shared_lim
     if not unlearned:
         plt.savefig('fig/feature_plot_2d_original_'+cfg.dataset.name+'.png')
     else:
-        if cfg.golden_model==False:
+        if cfg.unlearning_method != 'retrain':
             plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_'+cfg.unlearning_method+'.png')
         else:
             plt.savefig('fig/feature_plot_2d_forgetting_set_'+str(forgetting_subset)+'_golden.png')
@@ -215,7 +215,7 @@ def main(cfg):
     model.load_state_dict(torch.load(weights, map_location=cfg.device))
     pca, shared_limits = plot_features(cfg, model, test_loader, unlearned=False)
     
-    if cfg.golden_model==True:
+    if cfg.unlearning_method == 'retrain':
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name +'_resnet_only_retain_set'+str(cfg.forgetting_set)+ '.pth')
         model.load_state_dict(torch.load(weights, map_location=cfg.device))
         plot_features(cfg,model, test_loader, pca=pca, unlearned=True, shared_limits=shared_limits)

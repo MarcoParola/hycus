@@ -10,20 +10,20 @@ model: resnet
 weights_name: ResNet18_Weights.IMAGENET1K_V1
 unlearning_method: icus
 forgetting_set_strategy: random_class
-forgetting_set: [4,22,49,51,63,68,72,79,88,93]
+forgetting_set: [10,90,115]
 forgetting_set_size: 10
 original_model: False
 
 dataset: 
-  name: cifar10
+  name: ageDB
   path: ./data
-  classes: 10
+  classes: 57
   resize: 224
 
 device: "cuda"
 
 train:
-  batch_size: 32
+  batch_size: 16
   max_epochs: 120
   lr: 5e-4
   save_path: checkpoints/

@@ -29,7 +29,7 @@ def retrieve_AgeDB_dataset(zip_path, extract_folder):
         class_counts[nome] += 1
     
     # Filter classes with less than 15 samples
-    valid_classes = {name for name, count in class_counts.items() if count >= 15}
+    valid_classes = {name for name, count in class_counts.items() if count >= 41}
 
     dataset = []
 

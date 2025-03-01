@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import os
 import random
+import time
 import copy
 import json
 from torch.utils.data import DataLoader
@@ -159,6 +160,7 @@ class Icus(BaseUnlearningMethod):
         self.model.model.fc.train()  # Model in training mode
         current_batch=0
         running_loss = 0.0
+        start=time.time()
         for batch in unlearning_train:
             torch.cuda.empty_cache()
             targets, weights, descr, _ = batch
@@ -215,7 +217,12 @@ class Icus(BaseUnlearningMethod):
             interval_log=100
 
         if epoch % interval_log == 0 or epoch == self.opt.unlearn.max_epochs-1:
+            partial=time.time()
             self.test_unlearning_effect(unlearning_train, val_loader, self.forgetting_subset, epoch)
+            if epoch == interval_log:
+                total=time.time()-start
+                print(f"Time for epoch {epoch}: {total} seconds")
+                print(f"Time for epoch {epoch} without validation: {total-(partial-start)} seconds")
         
 
     def compute_loss(self, descr, att_from_att, weights, weight_from_weight, att_from_weight, weight_from_att, latent_att, latent_weight):
