@@ -15,3 +15,9 @@ oxford-iiit-pet:
 
 oxford-flowers:
   n_classes: 102
+
+lfw:
+  n_classes: 143
+
+ageDB:
+  n_classes: 57
