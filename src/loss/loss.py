@@ -14,11 +14,10 @@ class NegGradLoss(nn.Module):
 
 class NegGradPlusLoss(nn.Module):
     """NegGradPlusLoss, cross entropy loss positive on the retain samples and negative on the forget samples"""
-    def __init__(self, num_classes, negative_classes=[]):
+    def __init__(self, negative_classes=[]):
         super().__init__()
         self.criterion = nn.CrossEntropyLoss(reduction='none')
         self.negative_classes = negative_classes
-        self.num_classes = num_classes
 
     def forward(self, logits, targets):
         loss = self.criterion(logits, targets)
