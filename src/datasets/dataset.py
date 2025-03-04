@@ -67,7 +67,7 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.12
         data = fetch_lfw_people(
             color=True,
             resize=resize / 256,  # set resolution
-            min_faces_per_person=20  # Take only people with at least 20 images
+            min_faces_per_person=11  # Take only people with at least 20 images
         )
 
         images = torch.tensor(data.images).permute(0, 3, 1, 2).float()  # Convert to tensor and permute dimensions
@@ -76,6 +76,7 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.12
         class_dict = defaultdict(list)
         for img, lbl in zip(images, labels):
             class_dict[lbl.item()].append(img)
+        print(f'Number of classes: {len(class_dict)}')
 
         # Initialize lists for train, val and test images and labels
         train_images, val_images, test_images = [], [], []
@@ -102,7 +103,7 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.12
             # Distribute the remaining images in train, val and test
             remaining = imgs[6:]
             for i, img in enumerate(remaining):
-                if len(train_images) <= len(val_images) and len(train_images) <= len(test_images):
+                if len(train_images) <= 2*len(val_images) and len(train_images) <= 2*len(test_images):
                     train_images.append(img)
                     train_labels.append(lbl)
                 elif len(val_images) <= len(test_images):
@@ -231,4 +232,3 @@ if __name__ == "__main__":
         for i in range(10):
             img, lbl = test.__getitem__(i)
             print(img.shape, lbl)
-    

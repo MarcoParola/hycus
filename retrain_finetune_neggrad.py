@@ -35,7 +35,12 @@ def main(cfg):
     # retrieving forgetting set for filtering
     forgetting_set = get_forgetting_subset(cfg.forgetting_set, cfg.dataset.classes, cfg.forgetting_set_size)
 
+<<<<<<< HEAD
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
+=======
+    
+    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
+>>>>>>> b1470f6dc3dd787c44e95a2a2c9e01022ece7023
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)

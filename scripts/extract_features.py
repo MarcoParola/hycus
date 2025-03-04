@@ -56,13 +56,8 @@ def main(cfg):
         shuffle=False, 
         num_workers=cfg.train.num_workers)
 
-<<<<<<< HEAD
-    model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
-    if cfg.unlearning_method == 'retrain':
-=======
     model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
     if cfg.golden_model==True:
->>>>>>> 0709529d6df5ffeab555d533a96135ba91ff7a64
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_resnet_only_retain_set'+str(cfg.forgetting_set)+'.pth')
     else:
         if cfg.original_model==True:
