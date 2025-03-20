@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import time
 
 
 class NegGradLoss(nn.Module):
@@ -24,3 +25,23 @@ class NegGradPlusLoss(nn.Module):
         negative_mask = torch.tensor([1.0 if t not in self.negative_classes else -1.0 for t in targets], device=logits.device)
         loss = loss * negative_mask
         return loss.mean()
+
+class RandRelabelingLoss(nn.Module):
+    """RandRelabelingLoss, cross entropy loss with random relabeling. It receives only forget samples."""
+    def __init__(self, num_classes):
+        super(RandRelabelingLoss, self).__init__()
+        self.num_classes = num_classes
+        self.criterion = nn.CrossEntropyLoss(reduction='none')
+
+    def forward(self, logits, targets):
+        batch_size = targets.size(0)
+        
+        # Generate new random labels avoiding original targets
+        all_classes = torch.arange(self.num_classes, device=targets.device).repeat(batch_size, 1)
+        mask = all_classes != targets.unsqueeze(1)
+        available_classes = all_classes[mask].view(batch_size, -1)
+        new_targets = available_classes[torch.arange(batch_size), torch.randint(0, self.num_classes - 1, (batch_size,), device=targets.device)]
+        loss = self.criterion(logits, new_targets)
+        return loss.mean()
+
+
