@@ -12,7 +12,7 @@ from tqdm import tqdm
 from src.datasets.dataset import load_dataset
 from src.models.classifier import Classifier
 from src.metrics.metrics import compute_metrics
-from src.loss.loss import NegGradLoss, NegGradPlusLoss
+from src.loss.loss import NegGradLoss, NegGradPlusLoss, RandRelabelingLoss
 from src.log import get_loggers
 from omegaconf import OmegaConf
 import multiprocessing
@@ -32,15 +32,12 @@ def main(cfg):
     # Load dataset
     data_dir = os.path.join(cfg.currentDir, cfg.dataset.path)
     train, val, test = load_dataset(cfg.dataset.name, data_dir, cfg.dataset.resize)
+    img,lbl = train.__getitem__(0)
+    print(img.shape, lbl)
     # retrieving forgetting set for filtering
     forgetting_set = get_forgetting_subset(cfg.forgetting_set, cfg.dataset.classes, cfg.forgetting_set_size)
 
-<<<<<<< HEAD
     model = Classifier(cfg.weights_name, num_classes=cfg[cfg.dataset.name].n_classes, finetune=True)
-=======
-    
-    model = Classifier(cfg.weights_name, num_classes=cfg.dataset.classes, finetune=True)
->>>>>>> b1470f6dc3dd787c44e95a2a2c9e01022ece7023
     model.to(cfg.device)
 
     optimizer = AdamW(model.parameters(), lr=cfg.train.lr)
@@ -55,11 +52,13 @@ def main(cfg):
     if cfg.unlearning_method != 'retrain':
         weights = os.path.join(cfg.currentDir, cfg.train.save_path, cfg.dataset.name + '_' + cfg.model + '.pth')
         model.load_state_dict(torch.load(weights, map_location=cfg.device))
-    if cfg.unlearning_method == 'neggrad':
-        criterion = NegGradLoss()
+    if cfg.unlearning_method == 'neggrad' or cfg.unlearning_method == 'randomlabel':
         idx_train = [i for i, t in enumerate(train.targets) if t in forgetting_set]
         train = Subset(train, idx_train)
-        criterion = NegGradLoss()
+        if cfg.unlearning_method == 'neggrad':
+            criterion = NegGradLoss()
+        elif cfg.unlearning_method == 'randomlabel':
+            criterion = RandRelabelingLoss(cfg[cfg.dataset.name].n_classes)
     if cfg.unlearning_method == 'neggradplus':
         criterion = NegGradPlusLoss(forgetting_set)
 
@@ -67,7 +66,7 @@ def main(cfg):
     train_loader = DataLoader(train, batch_size=cfg.train.batch_size, shuffle=True, num_workers=cfg.train.num_workers)
     val_loader = DataLoader(val, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
     test_loader = DataLoader(test, batch_size=cfg.train.batch_size, shuffle=False, num_workers=cfg.train.num_workers)
-
+    '''
     # TODO -> DELETE
     model.eval()
     # test
@@ -97,7 +96,7 @@ def main(cfg):
     retain_acc = 100 * correct_ret / total_ret if total_ret > 0 else 0
     forget_acc = 100 * correct_for / total_for if total_for > 0 else 0
     wandb_logger.log_metrics({"retain_test_acc": retain_acc, "forget_test_acc": forget_acc})
-
+    '''
 
     # training    
     for epoch in range(cfg.train.max_epochs):

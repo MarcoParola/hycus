@@ -73,6 +73,10 @@ def main(cfg):
     print(f'Accuracy on retained set: {100 * total_correct_retain / total_retain:.2f}%')
     print(f'Accuracy on forgetting set: {100 * total_correct_forget / total_forget:.2f}%')
 
+    # write acc_retain, acc_forget to file
+    with open('results/lfw_orig_results.txt', 'a') as f:
+        f.write(f"{cfg.dataset.name} {cfg.model} {cfg.unlearning_method} {cfg.forgetting_set} {overall_accuracy:.2f} {100 * total_correct_retain / total_retain:.2f} {100 * total_correct_forget / total_forget:.2f}\n")
+
 
 if __name__ == '__main__':
     main()

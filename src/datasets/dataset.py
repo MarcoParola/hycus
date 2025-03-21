@@ -32,6 +32,17 @@ class ImgTextDataset(torch.utils.data.Dataset):
 
         return img, lbl
 
+class LfwDataset(torch.utils.data.Dataset):
+    def __init__(self, images, labels):
+        self.images = images
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        return self.images[idx], self.labels[idx]
+
 
 def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.125):
 
@@ -128,17 +139,6 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.12
         unique_val = torch.unique(val_labels)
         unique_test = torch.unique(test_labels)
 
-        # create the dataset
-        class LfwDataset(torch.utils.data.Dataset):
-            def __init__(self, images, labels):
-                self.images = images
-                self.labels = labels
-
-            def __len__(self):
-                return len(self.images)
-
-            def __getitem__(self, idx):
-                return self.images[idx], self.labels[idx]
 
         train = LfwDataset(train_images, train_labels)
         val = LfwDataset(val_images, val_labels)
