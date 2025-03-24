@@ -28,19 +28,16 @@ class NegGradPlusLoss(nn.Module):
 
 class RandRelabelingLoss(nn.Module):
     """RandRelabelingLoss, cross entropy loss with random relabeling. It receives only forget samples."""
-    def __init__(self, num_classes):
+    def __init__(self, num_classes, negative_classes=[]):
         super(RandRelabelingLoss, self).__init__()
         self.num_classes = num_classes
+        self.positive_classes = list(set(range(num_classes)) - set(negative_classes))
         self.criterion = nn.CrossEntropyLoss(reduction='none')
 
     def forward(self, logits, targets):
         batch_size = targets.size(0)
-        
-        # Generate new random labels avoiding original targets
-        all_classes = torch.arange(self.num_classes, device=targets.device).repeat(batch_size, 1)
-        mask = all_classes != targets.unsqueeze(1)
-        available_classes = all_classes[mask].view(batch_size, -1)
-        new_targets = available_classes[torch.arange(batch_size), torch.randint(0, self.num_classes - 1, (batch_size,), device=targets.device)]
+        new_targets = torch.randint(0, len(self.positive_classes), (batch_size,), device=targets.device)
+        new_targets = torch.tensor([self.positive_classes[t] for t in new_targets], device=targets.device)
         loss = self.criterion(logits, new_targets)
         return loss.mean()
 
