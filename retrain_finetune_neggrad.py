@@ -58,7 +58,7 @@ def main(cfg):
         if cfg.unlearning_method == 'neggrad':
             criterion = NegGradLoss()
         elif cfg.unlearning_method == 'randomlabel':
-            criterion = RandRelabelingLoss(cfg[cfg.dataset.name].n_classes)
+            criterion = RandRelabelingLoss(cfg[cfg.dataset.name].n_classes, forgetting_set)
     if cfg.unlearning_method == 'neggradplus':
         criterion = NegGradPlusLoss(forgetting_set)
 
