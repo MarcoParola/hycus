@@ -43,6 +43,19 @@ class LfwDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         return self.images[idx], self.labels[idx]
 
+class AgeDBDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, idx):
+        img, lbl = self.dataset[idx]
+        if self.transform:
+            img = self.transform(img)
+        return img, lbl
 
 def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.125):
 
@@ -145,19 +158,7 @@ def load_dataset(dataset, data_dir, resize=224, val_split=0.125, test_split=0.12
         test = LfwDataset(test_images, test_labels)
 
     elif dataset == 'ageDB':
-        class AgeDBDataset(torch.utils.data.Dataset):
-            def __init__(self, dataset, transform=None):
-                self.dataset = dataset
-                self.transform = transform
-
-            def __len__(self):
-                return len(self.dataset)
-
-            def __getitem__(self, idx):
-                img, lbl = self.dataset[idx]
-                if self.transform:
-                    img = self.transform(img)
-                return img, lbl
+        
         sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
         os.chdir(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../')))
         dataset = retrieve_AgeDB_dataset("data/AgeDB.zip", "data/AgeDB/AgeDB")
